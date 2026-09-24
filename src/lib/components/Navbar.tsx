@@ -4,16 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { startTransition, useEffect, useState } from "react";
 
-
 import { Moon, CartLarge5 } from "reicon-react";
 import Button from "../ui/Button";
-
-const navLinks = [
-    { label: "Inicio", href: "/", icon: "home" },
-    { label: "Menú", href: "/menu", icon: "menu" },
-    { label: "Reserva", href: "/booking", icon: "booking" },
-    { label: "Perfil", href: "/profile", icon: "profile" },
-];
+import { navLinks } from "./navbar.types";
 
 export default function Navbar() {
     const pathname = usePathname();
