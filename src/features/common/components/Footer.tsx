@@ -34,22 +34,14 @@ const navigationSections: FooterSection[] = [
 export default function Footer() {
     return (
         <footer className="relative mt-auto border-t border-border/20 bg-primary text-primary-foreground">
-            {/* Subtle brand gold accent line */}
-            <div
-                className="h-1 w-full bg-gradient-to-r from-transparent via-secondary/70 to-transparent"
-                aria-hidden="true"
-            />
-
             <div className="mx-auto max-w-(--container-max) px-(--spacing-margin-mobile) pt-12 pb-28 md:px-(--spacing-margin-desktop) md:pt-16 md:pb-12">
                 {/* Main Footer Grid */}
                 <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
                     {/* Brand Column */}
                     <div className="flex flex-col gap-4 sm:col-span-2 lg:col-span-1">
-                        <div>
-                            <h3 className="mt-2 font-display text-3xl font-bold tracking-tight text-white">
-                                Casa Flora
-                            </h3>
-                        </div>
+                        <h3 className="m-0 font-display text-3xl font-bold tracking-tight text-secondary">
+                            Casa Flora
+                        </h3>
 
                         <p className="max-w-sm font-body text-sm leading-relaxed text-white/80">
                             Tradición que Alimenta el Alma. Cocina con historia,
