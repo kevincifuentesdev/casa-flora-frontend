@@ -18,7 +18,7 @@ export default function SessionActions() {
     const { session, isLoading } = useSession();
 
     if (isLoading) {
-        return <span aria-hidden="true" className="block size-9 md:size-10" />;
+        return <span aria-hidden="true" className="hidden size-9 md:block md:size-10" />;
     }
 
     if (session) {
@@ -37,7 +37,7 @@ export default function SessionActions() {
     return (
         <Link
             href="/login"
-            className={`inline-flex h-8.5 shrink-0 items-center justify-center rounded-md bg-primary px-3 font-body text-xs font-semibold whitespace-nowrap text-primary-foreground shadow-xs transition duration-200 hover:opacity-90 active:scale-95 md:h-9 md:px-4 md:text-sm ${focusRing}`}
+            className={`hidden h-9 shrink-0 items-center justify-center rounded-md bg-primary px-4 font-body text-sm font-semibold whitespace-nowrap text-primary-foreground shadow-xs transition duration-200 hover:opacity-90 active:scale-95 md:inline-flex ${focusRing}`}
         >
             Sé cliente
         </Link>
