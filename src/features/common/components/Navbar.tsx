@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 import { startTransition, useEffect, useState } from "react";
 
 import { Moon, CartLarge5 } from "reicon-react";
-import Button from "../ui/Button";
-import { navLinks } from "./navbar.types";
+import Button from "./Button";
+import { navLinks } from "../services/navigation";
 
 export default function Navbar() {
     const pathname = usePathname();

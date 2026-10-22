@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { navLinks } from "./navbar.types";
+import { navLinks } from "../services/navigation";
 
 export default function BottomNavbar() {
     const pathname = usePathname();
