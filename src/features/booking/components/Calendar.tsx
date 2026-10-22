@@ -18,7 +18,7 @@ export default function Calendar() {
     return (
         <fieldset className="m-0 border-0 p-0">
             <div className="mb-3 flex items-center justify-between">
-                <legend className="mb-0 block text-sm/5 font-bold tracking-[0.05em] text-foreground">
+                <legend className="mb-0 block text-sm/5 font-bold tracking-wider text-foreground">
                     Fecha
                 </legend>
                 <div className="flex items-center gap-2">

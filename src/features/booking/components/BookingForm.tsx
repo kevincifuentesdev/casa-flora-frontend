@@ -16,7 +16,7 @@ export default function BookingForm() {
     const { submit, isSubmitting } = useBookingForm();
 
     return (
-        <div className="relative rounded-xl bg-surface p-6 shadow-[var(--shadow-ambient-md)] transition-colors duration-[400ms] md:p-8 lg:p-10">
+        <div className="relative rounded-xl bg-surface p-6 shadow-(--shadow-ambient-md) transition-colors duration-400 md:p-8 lg:p-10">
             <div
                 aria-hidden
                 className="pointer-events-none absolute top-0 left-0 size-full rounded-xl opacity-[0.03]"
@@ -46,7 +46,7 @@ export default function BookingForm() {
                             type="submit"
                             variant="outline"
                             disabled={isSubmitting}
-                            className="w-full gap-2 rounded-lg! px-6! py-4! text-sm/5 font-bold tracking-[0.05em] shadow-[var(--shadow-ambient-md)] hover:scale-[1.02] hover:opacity-100! hover:shadow-[0_8px_24px_rgb(38_24_20/12%)] active:scale-[0.97]"
+                            className="w-full gap-2 rounded-lg! px-6! py-4! text-sm/5 font-bold tracking-wider shadow-(--shadow-ambient-md) hover:scale-[1.02] hover:opacity-100! hover:shadow-[0_8px_24px_rgb(38_24_20/12%)] active:scale-[0.97]"
                         >
                             <span>Reservar</span>
                             <ArrowRight className="size-5 shrink-0" />
