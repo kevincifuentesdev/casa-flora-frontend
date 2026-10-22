@@ -137,3 +137,4 @@ export function validateSignUpDraft(draft: SignUpDraft): SignUpErrors {
 
     return errors;
 }
+
