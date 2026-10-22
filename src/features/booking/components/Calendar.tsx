@@ -70,15 +70,15 @@ export default function Calendar() {
                                 aria-pressed={cell.iso ? selected : undefined}
                                 onClick={() => cell.iso && selectDate(cell.iso)}
                                 className={[
-                                    "cursor-pointer rounded-default border-0 bg-transparent p-2 text-base/6 text-foreground transition duration-200 hover:bg-surface active:scale-[0.92]",
+                                    "cursor-pointer rounded-lg border-0 p-2 text-base/6 transition duration-200 active:scale-[0.92]",
+                                    selected
+                                        ? "scale-105 bg-primary font-bold text-primary-foreground shadow-(--shadow-ambient-sm) hover:bg-primary"
+                                        : "bg-transparent text-foreground hover:bg-surface",
                                     cell.muted
                                         ? "cursor-default text-foreground-muted opacity-40 hover:bg-transparent active:scale-100"
                                         : "",
                                     cell.isToday
                                         ? "font-bold shadow-[inset_0_0_0_2px_var(--primary)]"
-                                        : "",
-                                    selected
-                                        ? "scale-105 bg-primary font-bold text-white shadow-[var(--shadow-ambient-sm)] hover:bg-primary"
                                         : "",
                                 ].join(" ")}
                             >

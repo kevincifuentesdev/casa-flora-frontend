@@ -9,7 +9,7 @@ import ProductGrid from "@/features/menu/components/ProductGrid";
 export default function MenuPage() {
     return (
         <MenuFiltersProvider>
-            <div className="pb-(--spacing-gutter) md:pb-0">
+            <div className="pb-16 md:pb-24">
                 <MenuHeading />
                 <MenuSearchBar />
                 <section className="relative mx-auto max-w-(--container-max) px-(--spacing-margin-mobile) md:flex md:gap-8 md:px-(--spacing-margin-desktop)">

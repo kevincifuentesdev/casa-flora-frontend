@@ -30,7 +30,7 @@ const footerLinks = [
 
 export default function Footer() {
     return (
-        <footer className="bg-primary text-primary-foreground pt-12 px-(--spacing-margin-mobile) pb-30 mt-auto">
+        <footer className="bg-primary text-primary-foreground pt-12 px-(--spacing-margin-mobile) pb-30 mt-auto md:px-(--spacing-margin-desktop) md:pb-12">
             <div className="grid grid-cols-1 gap-(--spacing-gutter) max-w-(--container-max) my-0 mx-auto">
                 <div>
                     <h3 className="font-display text-2xl/loose text-secondary mt-0 mb-4">
