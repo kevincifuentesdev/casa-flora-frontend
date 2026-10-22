@@ -39,7 +39,7 @@ export default function FilterPanel() {
         <aside
             id="filter-panel"
             aria-label="Panel de filtros"
-            className={`fixed top-0 left-0 z-100 flex h-full w-[85%] max-w-80 flex-col gap-6 overflow-y-auto bg-surface p-6 shadow-[4px_0_24px_rgb(38_24_20/12%)] transition-[transform,background-color] duration-350 ease-[cubic-bezier(0.4,0,0.2,1)] md:sticky md:top-20 md:z-auto md:h-fit md:max-h-[calc(100vh-6rem)] md:w-65 md:min-w-65 md:max-w-none md:translate-x-0 md:rounded-lg md:shadow-(--shadow-ambient-sm) lg:w-70 lg:min-w-70 ${
+            className={`custom-scrollbar fixed top-0 left-0 z-100 flex h-full w-[85%] max-w-80 flex-col gap-6 overflow-y-auto overscroll-contain bg-surface p-6 shadow-[4px_0_24px_rgb(38_24_20/12%)] transition-[transform,background-color] duration-350 ease-[cubic-bezier(0.4,0,0.2,1)] md:sticky md:top-20 md:z-auto md:h-fit md:max-h-[calc(100vh-6rem)] md:w-65 md:min-w-65 md:max-w-none md:translate-x-0 md:rounded-lg md:shadow-(--shadow-ambient-sm) lg:w-70 lg:min-w-70 ${
                 panelOpen ? "translate-x-0" : "-translate-x-full"
             }`}
         >
