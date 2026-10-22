@@ -70,7 +70,7 @@ export default function Footer() {
                                     <li key={link.href}>
                                         <Link
                                             href={link.href}
-                                            className="inline-flex min-h-[36px] items-center font-body text-sm text-white/80 transition-all duration-200 hover:translate-x-1 hover:text-secondary focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-secondary focus-visible:outline-none"
+                                            className="inline-flex min-h-9 items-center font-body text-sm text-white/80 transition-all duration-200 hover:translate-x-1 hover:text-secondary focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-secondary focus-visible:outline-none"
                                         >
                                             {link.label}
                                         </Link>
@@ -89,7 +89,7 @@ export default function Footer() {
                         <address className="flex flex-col gap-3 font-body text-sm not-italic text-white/80">
                             <a
                                 href="mailto:contacto@casaflora.co"
-                                className="group inline-flex min-h-[36px] items-center gap-2.5 transition-colors duration-200 hover:text-secondary focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-secondary focus-visible:outline-none"
+                                className="group inline-flex min-h-9 items-center gap-2.5 transition-colors duration-200 hover:text-secondary focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-secondary focus-visible:outline-none"
                                 aria-label="Enviar correo a contacto@casaflora.co"
                             >
                                 <Sms
@@ -101,7 +101,7 @@ export default function Footer() {
 
                             <a
                                 href="tel:+573001234567"
-                                className="group inline-flex min-h-[36px] items-center gap-2.5 transition-colors duration-200 hover:text-secondary focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-secondary focus-visible:outline-none"
+                                className="group inline-flex min-h-9 items-center gap-2.5 transition-colors duration-200 hover:text-secondary focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-secondary focus-visible:outline-none"
                                 aria-label="Llamar al +57 (300) 123-4567"
                             >
                                 <Call
