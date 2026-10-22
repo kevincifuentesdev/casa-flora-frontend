@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { startTransition, useEffect, useState } from "react";
 
 import { Moon, CartLarge5 } from "reicon-react";
+import SessionActions from "@/features/auth/components/SessionActions";
 import Button from "./Button";
 import { navLinks } from "../services/navigation";
 
@@ -78,9 +79,12 @@ export default function Navbar() {
                     })}
                 </div>
 
-                <Button variant="icon" aria-label="Abrir carrito de compras">
-                    <CartLarge5 />
-                </Button>
+                <div className="flex items-center gap-1 md:gap-2">
+                    <Button variant="icon" aria-label="Abrir carrito de compras">
+                        <CartLarge5 />
+                    </Button>
+                    <SessionActions />
+                </div>
             </nav>
         </header>
     );

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Nunito_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
+import { SessionProvider } from "@/features/auth/context/SessionContext";
 import BottomNavbar from "@/features/common/components/BottomNavbar";
 import Footer from "@/features/common/components/Footer";
 import Navbar from "@/features/common/components/Navbar";
@@ -25,10 +26,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="es" className={`${nunitoSans.variable} ${playfairDisplay.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
-        <Navbar />
-        <main className="flex-1">{children}</main>
-        <Footer />
-        <BottomNavbar />
+        <SessionProvider>
+          <Navbar />
+          <main className="flex-1">{children}</main>
+          <Footer />
+          <BottomNavbar />
+        </SessionProvider>
       </body>
     </html>
   );
