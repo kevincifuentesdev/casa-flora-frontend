@@ -4,15 +4,20 @@ import { useMemo } from "react";
 
 import { filterProducts } from "@/features/menu/domain/menuFilters";
 import { useMenuFilters } from "@/features/menu/hooks/useMenuFilters";
-import { getMenuProducts } from "@/features/menu/services/menuService";
 
 export function useFilteredProducts() {
-    const { filters } = useMenuFilters();
-    const products = useMemo(() => getMenuProducts(), []);
+    const { filters, catalogProducts, isLoading, error, reloadCatalog } =
+        useMenuFilters();
     const filtered = useMemo(
-        () => filterProducts(products, filters),
-        [products, filters],
+        () => filterProducts(catalogProducts, filters),
+        [catalogProducts, filters],
     );
 
-    return { products: filtered, total: products.length };
+    return {
+        products: filtered,
+        total: catalogProducts.length,
+        isLoading,
+        error,
+        reloadCatalog,
+    };
 }

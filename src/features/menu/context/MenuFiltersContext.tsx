@@ -11,20 +11,24 @@ import {
 
 import {
     DEFAULT_SORT,
+    getMaxPrice,
     type MenuFilters,
     type SortOption,
 } from "@/features/menu/domain/menuFilters";
-import { getMenuMaxPrice } from "@/features/menu/services/menuService";
+import { getMenuProducts } from "@/features/menu/services/menuService";
+import type { Product } from "@/features/products/domain/product";
+import { fetchProducts } from "@/features/products/services/productService";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
 export interface MenuFiltersContextValue {
-    /** Applied (debounced) filters. */
     filters: MenuFilters;
-    /** Raw text currently typed in the search input. */
+    catalogProducts: Product[];
     searchInput: string;
     globalMaxPrice: number;
     panelOpen: boolean;
+    isLoading: boolean;
+    error: string | null;
     setSearchInput: (value: string) => void;
     clearSearch: () => void;
     toggleCategory: (category: string) => void;
@@ -34,6 +38,7 @@ export interface MenuFiltersContextValue {
     clearAll: () => void;
     openPanel: () => void;
     closePanel: () => void;
+    reloadCatalog: () => Promise<void>;
 }
 
 export const MenuFiltersContext = createContext<MenuFiltersContextValue | null>(
@@ -41,7 +46,17 @@ export const MenuFiltersContext = createContext<MenuFiltersContextValue | null>(
 );
 
 export function MenuFiltersProvider({ children }: { children: ReactNode }) {
-    const globalMaxPrice = useMemo(() => getMenuMaxPrice(), []);
+    const initialCatalog = useMemo(() => getMenuProducts(), []);
+    const [catalogProducts, setCatalogProducts] =
+        useState<Product[]>(initialCatalog);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const globalMaxPrice = useMemo(
+        () =>
+            catalogProducts.length > 0 ? getMaxPrice(catalogProducts) : 25000,
+        [catalogProducts],
+    );
 
     const [searchInput, setSearchInputState] = useState("");
     const [search, setSearch] = useState("");
@@ -49,6 +64,31 @@ export function MenuFiltersProvider({ children }: { children: ReactNode }) {
     const [maxPrice, setMaxPrice] = useState(globalMaxPrice);
     const [sort, setSort] = useState<SortOption>(DEFAULT_SORT);
     const [panelOpen, setPanelOpen] = useState(false);
+
+    const reloadCatalog = useCallback(async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const response = await fetchProducts();
+            setCatalogProducts(response.data);
+            const nextMax =
+                response.meta?.maxPrice ??
+                (response.data.length > 0 ? getMaxPrice(response.data) : 25000);
+            setMaxPrice((prev) =>
+                prev === globalMaxPrice || prev > nextMax ? nextMax : prev,
+            );
+        } catch {
+            setError(
+                "No pudimos sincronizar el menú con el servidor. Mostrando catálogo local.",
+            );
+        } finally {
+            setIsLoading(false);
+        }
+    }, [globalMaxPrice]);
+
+    useEffect(() => {
+        void reloadCatalog();
+    }, [reloadCatalog]);
 
     useEffect(() => {
         const timeout = setTimeout(
@@ -94,9 +134,12 @@ export function MenuFiltersProvider({ children }: { children: ReactNode }) {
     const value = useMemo<MenuFiltersContextValue>(
         () => ({
             filters: { search, categories, maxPrice, sort },
+            catalogProducts,
             searchInput,
             globalMaxPrice,
             panelOpen,
+            isLoading,
+            error,
             setSearchInput: setSearchInputState,
             clearSearch,
             toggleCategory,
@@ -106,21 +149,26 @@ export function MenuFiltersProvider({ children }: { children: ReactNode }) {
             clearAll,
             openPanel,
             closePanel,
+            reloadCatalog,
         }),
         [
             search,
             categories,
             maxPrice,
             sort,
+            catalogProducts,
             searchInput,
             globalMaxPrice,
             panelOpen,
+            isLoading,
+            error,
             clearSearch,
             toggleCategory,
             resetMaxPrice,
             clearAll,
             openPanel,
             closePanel,
+            reloadCatalog,
         ],
     );
 
