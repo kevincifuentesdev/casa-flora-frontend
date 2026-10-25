@@ -1,10 +1,19 @@
 "use client";
 
-import { createContext, useCallback, useMemo, useSyncExternalStore } from "react";
+import {
+    createContext,
+    useCallback,
+    useEffect,
+    useMemo,
+    useSyncExternalStore,
+} from "react";
 import type { ReactNode } from "react";
 
 import type { Session, SessionState } from "../domain/session";
-import { signOutWithBetterAuth } from "../services/authService";
+import {
+    signOutWithBetterAuth,
+    syncSessionWithBackend,
+} from "../services/authService";
 import {
     getServerSessionSnapshot,
     getSessionSnapshot,
@@ -18,6 +27,7 @@ export interface SessionContextValue {
     isAuthenticated: boolean;
     login: (session: Session) => void;
     logout: () => Promise<void>;
+    refreshSession: () => Promise<Session | null>;
 }
 
 export const SessionContext = createContext<SessionContextValue | null>(null);
@@ -29,8 +39,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         getServerSessionSnapshot,
     );
 
+    useEffect(() => {
+        void syncSessionWithBackend();
+    }, []);
+
     const login = useCallback((next: Session) => saveSession(next), []);
     const logout = useCallback(() => signOutWithBetterAuth(), []);
+    const refreshSession = useCallback(() => syncSessionWithBackend(), []);
 
     const value = useMemo<SessionContextValue>(
         () => ({
@@ -39,8 +54,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             isAuthenticated: !!session,
             login,
             logout,
+            refreshSession,
         }),
-        [session, login, logout],
+        [session, login, logout, refreshSession],
     );
 
     return <SessionContext value={value}>{children}</SessionContext>;

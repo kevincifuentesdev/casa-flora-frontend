@@ -25,7 +25,6 @@ export function subscribeToSession(listener: () => void) {
     };
 }
 
-/** Client snapshot. Returns a stable reference while storage is unchanged. */
 export function getSessionSnapshot(): SessionState {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw === cachedRaw) return cachedSession;
@@ -43,7 +42,6 @@ export function getServerSessionSnapshot(): SessionState {
     return undefined;
 }
 
-// TODO: replace with calls to the backend auth endpoints.
 export function saveSession(session: Session) {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
     emit();

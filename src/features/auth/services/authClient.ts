@@ -4,8 +4,10 @@ import {
 } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
+import { API_BASE_URL } from "@/features/common/services/apiClient";
+
 export const authClient = createAuthClient({
-    baseURL: process.env.NEXT_PUBLIC_API_URL,
+    baseURL: API_BASE_URL,
     plugins: [
         usernameClient(),
         inferAdditionalFields({
@@ -26,4 +28,3 @@ export const authClient = createAuthClient({
         }),
     ],
 });
-

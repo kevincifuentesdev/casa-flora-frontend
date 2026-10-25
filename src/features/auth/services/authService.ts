@@ -1,3 +1,7 @@
+import {
+    ApiClientError,
+    apiRequest,
+} from "@/features/common/services/apiClient";
 import { isEmailIdentifier } from "../domain/authValidation";
 import type {
     LoginDraft,
@@ -13,29 +17,11 @@ export interface AuthServiceResult {
     error?: string;
 }
 
-interface StoredAccount extends SessionUser {
-    password: string;
-}
-
-const ACCOUNTS_STORAGE_KEY = "casa-flora-accounts";
-
-function readStoredAccounts(): StoredAccount[] {
-    if (typeof window === "undefined") return [];
-    try {
-        const raw = window.localStorage.getItem(ACCOUNTS_STORAGE_KEY);
-        return raw ? (JSON.parse(raw) as StoredAccount[]) : [];
-    } catch {
-        return [];
-    }
-}
-
-function writeStoredAccounts(accounts: StoredAccount[]) {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(accounts));
-}
-
-function isBackendUnavailable(status?: number): boolean {
-    return status === undefined || status === 0 || status === 404 || status >= 502;
+export interface UpdateProfilePayload {
+    firstName?: string;
+    lastName?: string;
+    birthDate?: string;
+    username?: string;
 }
 
 function mapBetterAuthUser(
@@ -79,6 +65,42 @@ function mapBetterAuthUser(
     };
 }
 
+function translateAuthErrorMessage(
+    message: string | undefined,
+    fallback: string,
+): string {
+    if (!message) return fallback;
+    const lower = message.toLowerCase();
+    if (lower.includes("invalid email or password") || lower.includes("invalid username or password")) {
+        return "Credenciales inválidas. Verifica tu usuario o contraseña.";
+    }
+    if (lower.includes("user already exists") || lower.includes("email")) {
+        return "Este correo electrónico ya está registrado.";
+    }
+    if (lower.includes("username is already taken") || lower.includes("username")) {
+        return "Este nombre de usuario ya está en uso.";
+    }
+    return message;
+}
+
+export async function syncSessionWithBackend(): Promise<Session | null> {
+    try {
+        const res = await apiRequest<{ data: Record<string, unknown> }>(
+            "/api/users/me",
+        );
+        const session: Session = {
+            user: mapBetterAuthUser(res.data),
+        };
+        saveSession(session);
+        return session;
+    } catch (error) {
+        if (error instanceof ApiClientError && error.status === 401) {
+            clearSession();
+        }
+        return null;
+    }
+}
+
 export async function loginWithBetterAuth(
     draft: LoginDraft,
 ): Promise<AuthServiceResult> {
@@ -97,6 +119,9 @@ export async function loginWithBetterAuth(
               });
 
         if (response.data?.user) {
+            const synced = await syncSessionWithBackend();
+            if (synced) return { session: synced };
+
             const session: Session = {
                 user: mapBetterAuthUser(
                     response.data.user as Record<string, unknown>,
@@ -107,36 +132,17 @@ export async function loginWithBetterAuth(
             return { session };
         }
 
-        if (response.error && !isBackendUnavailable(response.error.status)) {
-            return {
-                error:
-                    response.error.message ||
-                    "Credenciales inválidas. Verifica tu usuario o contraseña.",
-            };
-        }
-    } catch {
-        // Fallback to local session store when backend API is not reachable
-    }
-
-    const accounts = readStoredAccounts();
-    const normalized = identifier.toLowerCase();
-    const matched = accounts.find((acc) =>
-        isEmail
-            ? acc.email.toLowerCase() === normalized
-            : acc.username.toLowerCase() === normalized,
-    );
-
-    if (!matched || matched.password !== draft.password) {
         return {
-            error: "Credenciales inválidas. Verifica tu usuario/correo y contraseña.",
+            error: translateAuthErrorMessage(
+                response.error?.message,
+                "Credenciales inválidas. Verifica tu usuario o contraseña.",
+            ),
+        };
+    } catch {
+        return {
+            error: "No fue posible conectar con el servidor de autenticación. Verifica que el backend esté activo.",
         };
     }
-
-    const { password: _discarded, ...user } = matched;
-    void _discarded;
-    const session: Session = { user };
-    saveSession(session);
-    return { session };
 }
 
 export async function signUpWithBetterAuth(
@@ -161,6 +167,9 @@ export async function signUpWithBetterAuth(
         });
 
         if (response.data?.user) {
+            const synced = await syncSessionWithBackend();
+            if (synced) return { session: synced };
+
             const session: Session = {
                 user: mapBetterAuthUser(
                     response.data.user as Record<string, unknown>,
@@ -178,58 +187,50 @@ export async function signUpWithBetterAuth(
             return { session };
         }
 
-        if (response.error && !isBackendUnavailable(response.error.status)) {
-            return {
-                error:
-                    response.error.message ||
-                    "No fue posible crear la cuenta. Verifica los datos ingresados.",
-            };
-        }
+        return {
+            error: translateAuthErrorMessage(
+                response.error?.message,
+                "No fue posible crear la cuenta. Verifica los datos ingresados.",
+            ),
+        };
     } catch {
-        // Fallback to local session store when backend API is not reachable
-    }
-
-    const accounts = readStoredAccounts();
-    const emailTaken = accounts.some(
-        (acc) => acc.email.toLowerCase() === email.toLowerCase(),
-    );
-    if (emailTaken) {
         return {
-            error: "Este correo electrónico ya está registrado.",
+            error: "No fue posible conectar con el servidor de autenticación. Verifica que el backend esté activo.",
         };
     }
+}
 
-    const usernameTaken = accounts.some(
-        (acc) => acc.username.toLowerCase() === username.toLowerCase(),
-    );
-    if (usernameTaken) {
+export async function updateUserProfile(
+    payload: UpdateProfilePayload,
+): Promise<AuthServiceResult> {
+    try {
+        const res = await apiRequest<{ data: Record<string, unknown> }>(
+            "/api/users/me",
+            {
+                method: "PATCH",
+                body: JSON.stringify(payload),
+            },
+        );
+        const session: Session = {
+            user: mapBetterAuthUser(res.data),
+        };
+        saveSession(session);
+        return { session };
+    } catch (error) {
+        if (error instanceof ApiClientError) {
+            return { error: error.message };
+        }
         return {
-            error: "Este nombre de usuario ya está en uso.",
+            error: "No fue posible actualizar tu perfil en este momento.",
         };
     }
-
-    const user: SessionUser = {
-        id: crypto.randomUUID(),
-        name: fullName,
-        firstName,
-        lastName,
-        birthDate,
-        username,
-        email,
-    };
-
-    writeStoredAccounts([...accounts, { ...user, password: draft.password }]);
-    const session: Session = { user };
-    saveSession(session);
-    return { session };
 }
 
 export async function signOutWithBetterAuth(): Promise<void> {
     try {
         await authClient.signOut();
     } catch {
-        // Ignore network errors when backend is not connected
+        // Clear local snapshot even if the network request fails.
     }
     clearSession();
 }
-
