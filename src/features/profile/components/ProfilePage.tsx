@@ -240,7 +240,7 @@ export function ProfilePage() {
 
     if (isSessionLoading) {
         return (
-            <div className="mx-auto w-full max-w-(--container-max) px-(--spacing-margin-mobile) py-12 pb-24 md:px-(--spacing-margin-desktop)">
+            <div className="mx-auto w-full max-w-(--container-max) px-(--spacing-margin-mobile) py-10 pb-28 md:px-(--spacing-margin-desktop)">
                 <div
                     role="status"
                     aria-live="polite"
@@ -254,7 +254,7 @@ export function ProfilePage() {
 
     if (!session?.user) {
         return (
-            <div className="mx-auto w-full max-w-2xl px-(--spacing-margin-mobile) py-16 pb-24 md:px-(--spacing-margin-desktop)">
+            <div className="mx-auto w-full max-w-2xl px-(--spacing-margin-mobile) py-14 pb-28 md:px-(--spacing-margin-desktop)">
                 <div className="rounded-2xl border border-foreground-muted/15 bg-surface p-8 text-center shadow-(--shadow-ambient-md)">
                     <h1 className="m-0 font-display text-3xl font-bold text-primary">
                         Tu cuenta en Casa Flora
@@ -288,62 +288,113 @@ export function ProfilePage() {
     ).length;
 
     return (
-        <div className="mx-auto w-full max-w-(--container-max) px-(--spacing-margin-mobile) py-8 pb-24 md:px-(--spacing-margin-desktop) md:py-10">
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-                <div className="flex flex-col items-center justify-center rounded-2xl border border-foreground-muted/10 bg-surface p-8 text-center shadow-(--shadow-ambient-md) lg:col-span-4">
-                    <div className="flex size-28 items-center justify-center overflow-hidden rounded-full border-2 border-[#e5b8ad] bg-[#fbf7f2] p-2 shadow-xs">
-                        <Image
-                            src="/img/temp_logo.png"
-                            alt="Emblema de Casa Flora"
-                            width={104}
-                            height={104}
-                            className="size-full rounded-full object-contain"
-                        />
-                    </div>
+        <div className="mx-auto w-full max-w-(--container-max) px-(--spacing-margin-mobile) py-5 pb-28 md:px-(--spacing-margin-desktop) md:py-10 md:pb-16">
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 lg:gap-6">
+                <div className="flex items-center justify-between gap-3 lg:col-span-4 lg:flex-col lg:justify-center lg:rounded-2xl lg:border lg:border-foreground-muted/10 lg:bg-surface lg:p-8 lg:text-center lg:shadow-(--shadow-ambient-md)">
+                    <div className="flex min-w-0 items-center gap-3.5 lg:flex-col lg:gap-0">
+                        <div className="relative flex size-16 shrink-0 items-center justify-center rounded-full border-2 border-[#bc8e56] bg-[#fbf7f2] p-1.5 shadow-xs lg:size-28 lg:border-[#e5b8ad] lg:p-2">
+                            <Image
+                                src="/img/temp_logo.png"
+                                alt="Emblema de Casa Flora"
+                                width={104}
+                                height={104}
+                                className="size-full rounded-full object-contain"
+                            />
+                            <span
+                                aria-hidden="true"
+                                className="absolute right-0 bottom-0 size-3.5 rounded-full border-2 border-background bg-emerald-600 lg:hidden"
+                            />
+                        </div>
 
-                    <h1 className="m-0 mt-5 font-display text-2xl font-bold text-primary">
-                        ¡Hola, {displayName}!
-                    </h1>
-                    <p className="m-0 mt-1.5 text-xs text-foreground-muted sm:text-sm">
-                        Sabor de hogar, siempre contigo.
-                    </p>
+                        <div className="min-w-0">
+                            <p className="m-0 text-[10px] font-bold tracking-[0.12em] text-[#ad5d4e] uppercase lg:hidden">
+                                BIENVENIDO A CASA
+                            </p>
+                            <h1 className="m-0 truncate font-display text-2xl leading-tight font-bold text-primary lg:mt-5">
+                                ¡Hola, {displayName}!
+                            </h1>
+                            <p className="m-0 mt-0.5 text-xs text-foreground-muted lg:hidden">
+                                Medellín, Antioquia
+                            </p>
+                            <p className="m-0 mt-1.5 hidden text-sm text-foreground-muted lg:block">
+                                Sabor de hogar, siempre contigo.
+                            </p>
+                        </div>
+                    </div>
 
                     <button
                         type="button"
                         onClick={() => toggleSection("edit-profile")}
                         aria-expanded={activeSection === "edit-profile"}
-                        className="mt-6 inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full border border-[#ad5d4e] bg-transparent px-6 py-2 text-xs font-semibold text-[#691a22] transition hover:bg-[#eed5ce]/35 dark:border-[#e5b8ad] dark:text-foreground"
+                        className="inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-foreground-muted/25 bg-surface px-4 py-2 text-xs font-semibold text-primary shadow-2xs transition hover:bg-[#eed5ce]/35 lg:mt-6 lg:border-[#ad5d4e] lg:bg-transparent lg:px-6 lg:text-[#691a22] dark:border-[#e5b8ad] dark:text-foreground"
                     >
-                        {activeSection === "edit-profile"
-                            ? "Cerrar Edición"
-                            : "Editar Perfil"}
+                        <span className="lg:hidden">
+                            {activeSection === "edit-profile"
+                                ? "Cerrar"
+                                : "Editar"}
+                        </span>
+                        <span className="hidden lg:inline">
+                            {activeSection === "edit-profile"
+                                ? "Cerrar Edición"
+                                : "Editar Perfil"}
+                        </span>
                     </button>
                 </div>
 
-                <div className="relative flex min-h-60 flex-col justify-between overflow-hidden rounded-2xl bg-linear-to-br from-[#691a22] to-[#4b030f] p-6 text-white shadow-(--shadow-ambient-md) sm:p-8 lg:col-span-8">
+                <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl bg-linear-to-br from-[#4b151b] via-[#3d1015] to-[#2c0b0e] p-5 text-white shadow-(--shadow-ambient-md) sm:p-7 lg:col-span-8 lg:min-h-60 lg:from-[#691a22] lg:to-[#4b030f]">
                     <svg
                         aria-hidden="true"
-                        viewBox="0 0 200 200"
-                        className="pointer-events-none absolute -top-6 -right-6 size-48 text-white/6"
+                        viewBox="0 0 120 120"
+                        className="pointer-events-none absolute -right-4 -bottom-4 size-36 text-white/7 lg:-top-6 lg:-right-6 lg:bottom-auto lg:size-48"
                         fill="currentColor"
                     >
-                        <path d="M112 18c8 28-14 48-8 76 4 18 22 28 24 48 3 26-18 46-44 46-32 0-54-26-48-58 4-22 22-38 38-54 18-18 32-34 38-58zm26 52c14 18 22 40 16 64-5 21-22 38-42 44 14-14 20-34 14-54-4-14-14-24-12-38 2-8 12-12 24-16z" />
+                        <path d="M60 18c7 0 13 6 13 13 0 4-2 8-5 10 3-1 6-2 9-2 7 0 13 6 13 13s-6 13-13 13c-3 0-6-1-9-2 3 2 5 6 5 10 0 7-6 13-13 13s-13-6-13-13c0-4 2-8 5-10-3 1-6 2-9 2-7 0-13-6-13-13s6-13 13-13c3 0 6 1 9 2-3-2-5-6-5-10 0-7 6-13 13-13zm0 26a8 8 0 100 16 8 8 0 000-16zm-4 42h8v24h-8V86z" />
                     </svg>
 
-                    <div className="relative z-10 flex items-start justify-between gap-4">
+                    <div className="relative z-10 flex items-start justify-between gap-3">
                         <div>
-                            <p className="m-0 text-[11px] font-bold tracking-[0.14em] text-[#e8b98a] uppercase">
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/12 px-3 py-1 text-[11px] font-semibold text-[#f5c58b] lg:hidden">
+                                <svg
+                                    aria-hidden="true"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                    className="size-3.5"
+                                >
+                                    <path d="M10 3a1.5 1.5 0 011.415 1.003A7.002 7.002 0 0117 11H3a7.002 7.002 0 015.585-6.997A1.5 1.5 0 0110 3zm-8 9.5h16a1 1 0 010 2H2a1 1 0 010-2z" />
+                                </svg>
+                                Club Casa Flora
+                            </span>
+                            <p className="m-0 hidden text-[11px] font-bold tracking-[0.14em] text-[#e8b98a] uppercase lg:block">
                                 FIDELIZACIÓN
                             </p>
-                            <h2 className="m-0 mt-2 font-display text-2xl font-bold text-white sm:text-3xl">
-                                Tu Próxima Recompensa
+
+                            <h2 className="m-0 mt-3 font-display text-xl font-bold text-white sm:text-2xl lg:mt-2 lg:text-3xl">
+                                <span className="lg:hidden">
+                                    Empanadas de la Abuela
+                                </span>
+                                <span className="hidden lg:inline">
+                                    Tu Próxima Recompensa
+                                </span>
                             </h2>
-                            <p className="m-0 mt-1 text-sm text-white/80">
+
+                            <p className="m-0 mt-1 text-xs text-white/75 lg:hidden">
+                                Tus puntos acumulados de tradición y amor
+                            </p>
+                            <p className="m-0 mt-1 hidden text-sm text-white/80 lg:block">
                                 Empanadas de la Abuela (Faltan 3 pts)
                             </p>
                         </div>
 
-                        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#f5c58b] px-3.5 py-1.5 text-xs font-bold text-[#3c2d28] shadow-xs">
+                        <div className="shrink-0 text-right lg:hidden">
+                            <span className="block font-display text-2xl leading-none font-bold text-[#f5c58b]">
+                                420
+                            </span>
+                            <span className="mt-1 block text-[9px] font-bold tracking-[0.14em] text-white/70 uppercase">
+                                PUNTOS
+                            </span>
+                        </div>
+
+                        <span className="hidden shrink-0 items-center gap-1.5 rounded-full bg-[#f5c58b] px-3.5 py-1.5 text-xs font-bold text-[#3c2d28] shadow-xs lg:inline-flex">
                             <svg
                                 aria-hidden="true"
                                 viewBox="0 0 20 20"
@@ -356,7 +407,42 @@ export function ProfilePage() {
                         </span>
                     </div>
 
-                    <div className="relative z-10 mt-8">
+                    <div className="relative z-10 mt-4 flex items-center justify-between gap-3 border-t border-white/10 pt-3.5 text-xs lg:hidden">
+                        <div className="flex items-center gap-2 text-white/85">
+                            <svg
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                className="size-4 shrink-0 text-[#f5c58b]"
+                            >
+                                <rect
+                                    x="3"
+                                    y="8"
+                                    width="18"
+                                    height="13"
+                                    rx="2"
+                                />
+                                <path d="M12 8v13M3 12h18M12 8c-2.5 0-4-1.5-4-3s1.5-2 4 0c2.5-2 4-.5 4 0s-1.5 3-4 3z" />
+                            </svg>
+                            <span>
+                                Te faltan{" "}
+                                <strong className="font-bold text-white">
+                                    80 pts
+                                </strong>{" "}
+                                para un almuerzo gratis
+                            </span>
+                        </div>
+                        <Link
+                            href="/menu"
+                            className="inline-flex min-h-11 shrink-0 items-center font-bold text-[#f5c58b] underline underline-offset-4 hover:text-white"
+                        >
+                            Canjear
+                        </Link>
+                    </div>
+
+                    <div className="relative z-10 mt-8 hidden lg:block">
                         <div
                             role="progressbar"
                             aria-label="Progreso de fidelización"
@@ -375,28 +461,32 @@ export function ProfilePage() {
                 </div>
             </div>
 
-            <section aria-labelledby="profile-actions-heading" className="mt-10">
-                <div className="mb-5 inline-block border-b-2 border-[#e5c5b5] pb-1.5">
+            <section
+                aria-labelledby="profile-actions-heading"
+                className="mt-7 sm:mt-10"
+            >
+                <div className="mb-3.5 sm:mb-5 sm:inline-block sm:border-b-2 sm:border-[#e5c5b5] sm:pb-1.5">
                     <h2
                         id="profile-actions-heading"
                         className="m-0 font-display text-xl font-bold text-primary sm:text-2xl"
                     >
-                        Mis Acciones
+                        <span className="sm:hidden">Mi Cuenta</span>
+                        <span className="hidden sm:inline">Mis Acciones</span>
                     </h2>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-4">
                     <button
                         type="button"
                         onClick={() => toggleSection("addresses")}
                         aria-expanded={activeSection === "addresses"}
-                        className={`flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border bg-surface p-6 text-center shadow-(--shadow-ambient-sm) transition hover:-translate-y-0.5 hover:shadow-(--shadow-ambient-md) ${
+                        className={`flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-2xl border bg-surface px-2.5 py-4 text-center shadow-(--shadow-ambient-sm) transition hover:-translate-y-0.5 hover:shadow-(--shadow-ambient-md) sm:min-h-32 sm:rounded-xl sm:p-6 ${
                             activeSection === "addresses"
                                 ? "border-accent ring-1 ring-accent"
                                 : "border-foreground-muted/10"
                         }`}
                     >
-                        <span className="flex size-12 items-center justify-center rounded-full bg-[#f6ded8] text-[#691a22]">
+                        <span className="flex size-10 items-center justify-center rounded-full bg-[#fbf2e3] text-[#4b151b] sm:size-12 sm:bg-[#f6ded8] sm:text-[#691a22]">
                             <svg
                                 aria-hidden="true"
                                 viewBox="0 0 24 24"
@@ -413,8 +503,11 @@ export function ProfilePage() {
                                 <circle cx="12" cy="11" r="2.2" />
                             </svg>
                         </span>
-                        <span className="mt-3 text-xs font-semibold text-foreground sm:text-sm">
+                        <span className="mt-2.5 text-xs leading-tight font-bold text-foreground sm:mt-3 sm:text-sm sm:font-semibold">
                             Mis Direcciones
+                        </span>
+                        <span className="mt-1 text-[10px] text-foreground-muted sm:hidden">
+                            2 guardadas
                         </span>
                     </button>
 
@@ -422,13 +515,13 @@ export function ProfilePage() {
                         type="button"
                         onClick={() => toggleSection("payments")}
                         aria-expanded={activeSection === "payments"}
-                        className={`flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border bg-surface p-6 text-center shadow-(--shadow-ambient-sm) transition hover:-translate-y-0.5 hover:shadow-(--shadow-ambient-md) ${
+                        className={`flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-2xl border bg-surface px-2.5 py-4 text-center shadow-(--shadow-ambient-sm) transition hover:-translate-y-0.5 hover:shadow-(--shadow-ambient-md) sm:min-h-32 sm:rounded-xl sm:p-6 ${
                             activeSection === "payments"
                                 ? "border-accent ring-1 ring-accent"
                                 : "border-foreground-muted/10"
                         }`}
                     >
-                        <span className="flex size-12 items-center justify-center rounded-full bg-[#f6ded8] text-[#691a22]">
+                        <span className="flex size-10 items-center justify-center rounded-full bg-[#fbf2e3] text-[#4b151b] sm:size-12 sm:bg-[#f6ded8] sm:text-[#691a22]">
                             <svg
                                 aria-hidden="true"
                                 viewBox="0 0 24 24"
@@ -447,8 +540,11 @@ export function ProfilePage() {
                                 <path d="M3 10h18M7 15h4" />
                             </svg>
                         </span>
-                        <span className="mt-3 text-xs font-semibold text-foreground sm:text-sm">
+                        <span className="mt-2.5 text-xs leading-tight font-bold text-foreground sm:mt-3 sm:text-sm sm:font-semibold">
                             Métodos de Pago
+                        </span>
+                        <span className="mt-1 text-[10px] text-foreground-muted sm:hidden">
+                            Visa **** 4912
                         </span>
                     </button>
 
@@ -456,13 +552,13 @@ export function ProfilePage() {
                         type="button"
                         onClick={() => toggleSection("orders")}
                         aria-expanded={activeSection === "orders"}
-                        className={`relative flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border bg-surface p-6 text-center shadow-(--shadow-ambient-sm) transition hover:-translate-y-0.5 hover:shadow-(--shadow-ambient-md) ${
+                        className={`relative flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-2xl border bg-surface px-2.5 py-4 text-center shadow-(--shadow-ambient-sm) transition hover:-translate-y-0.5 hover:shadow-(--shadow-ambient-md) sm:min-h-32 sm:rounded-xl sm:p-6 ${
                             activeSection === "orders"
                                 ? "border-accent ring-1 ring-accent"
                                 : "border-foreground-muted/10"
                         }`}
                     >
-                        <span className="flex size-12 items-center justify-center rounded-full bg-[#f6ded8] text-[#691a22]">
+                        <span className="flex size-10 items-center justify-center rounded-full bg-[#fbf2e3] text-[#4b151b] sm:size-12 sm:bg-[#f6ded8] sm:text-[#691a22]">
                             <svg
                                 aria-hidden="true"
                                 viewBox="0 0 24 24"
@@ -482,24 +578,24 @@ export function ProfilePage() {
                                 />
                             </svg>
                         </span>
-                        <span className="mt-3 text-xs font-semibold text-foreground sm:text-sm">
-                            Historial de Pedidos
-                        </span>
-                        {confirmedBookingsCount > 0 && (
-                            <span className="mt-1 text-[11px] font-semibold text-accent">
-                                {confirmedBookingsCount}{" "}
-                                {confirmedBookingsCount === 1
-                                    ? "reserva activa"
-                                    : "reservas activas"}
+                        <span className="mt-2.5 text-xs leading-tight font-bold text-foreground sm:mt-3 sm:text-sm sm:font-semibold">
+                            <span className="sm:hidden">Historial Pedidos</span>
+                            <span className="hidden sm:inline">
+                                Historial de Pedidos
                             </span>
-                        )}
+                        </span>
+                        <span className="mt-1 text-[10px] text-foreground-muted sm:text-[11px] sm:font-semibold sm:text-accent">
+                            {confirmedBookingsCount > 0
+                                ? `${confirmedBookingsCount} ${confirmedBookingsCount === 1 ? "reserva activa" : "reservas activas"}`
+                                : "14 órdenes"}
+                        </span>
                     </button>
 
                     <button
                         type="button"
                         onClick={() => toggleSection("settings")}
                         aria-expanded={activeSection === "settings"}
-                        className={`flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border bg-surface p-6 text-center shadow-(--shadow-ambient-sm) transition hover:-translate-y-0.5 hover:shadow-(--shadow-ambient-md) ${
+                        className={`hidden min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border bg-surface p-6 text-center shadow-(--shadow-ambient-sm) transition hover:-translate-y-0.5 hover:shadow-(--shadow-ambient-md) sm:flex ${
                             activeSection === "settings"
                                 ? "border-accent ring-1 ring-accent"
                                 : "border-foreground-muted/10"
@@ -530,7 +626,7 @@ export function ProfilePage() {
 
                 {(activeSection === "edit-profile" ||
                     activeSection === "settings") && (
-                    <div className="mt-6 rounded-2xl border border-foreground-muted/15 bg-surface p-6 shadow-(--shadow-ambient-md) sm:p-8">
+                    <div className="mt-5 rounded-2xl border border-foreground-muted/15 bg-surface p-5 shadow-(--shadow-ambient-md) sm:mt-6 sm:p-8">
                         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-foreground-muted/15 pb-4">
                             <div>
                                 <h3 className="m-0 font-display text-xl font-bold text-primary">
@@ -540,11 +636,11 @@ export function ProfilePage() {
                                     Correo registrado: {session.user.email}
                                 </p>
                             </div>
-                            <div className="flex flex-wrap items-center gap-3">
+                            <div className="flex flex-wrap items-center gap-2.5">
                                 <button
                                     type="button"
                                     onClick={() => void handleSignOut()}
-                                    className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full border border-destructive/40 bg-transparent px-5 py-2 text-xs font-semibold text-destructive transition hover:bg-destructive/10"
+                                    className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full border border-destructive/40 bg-transparent px-4 py-2 text-xs font-semibold text-destructive transition hover:bg-destructive/10"
                                 >
                                     Cerrar sesión
                                 </button>
@@ -561,7 +657,7 @@ export function ProfilePage() {
                         <form
                             onSubmit={handleProfileSubmit}
                             noValidate
-                            className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2"
+                            className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2"
                         >
                             <div>
                                 <label
@@ -686,7 +782,7 @@ export function ProfilePage() {
                             {profileError && (
                                 <p
                                     role="alert"
-                                    className=" rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-xs font-medium text-destructive sm:col-span-2"
+                                    className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-xs font-medium text-destructive sm:col-span-2"
                                 >
                                     {profileError}
                                 </p>
@@ -705,7 +801,7 @@ export function ProfilePage() {
                                 <button
                                     type="submit"
                                     disabled={isSavingProfile}
-                                    className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full bg-primary px-6 py-2.5 text-xs font-bold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                                    className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center rounded-full bg-primary px-6 py-2.5 text-xs font-bold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                                 >
                                     {isSavingProfile
                                         ? "Guardando cambios..."
@@ -717,7 +813,7 @@ export function ProfilePage() {
                 )}
 
                 {activeSection === "orders" && (
-                    <div className="mt-6 rounded-2xl border border-foreground-muted/15 bg-surface p-6 shadow-(--shadow-ambient-md) sm:p-8">
+                    <div className="mt-5 rounded-2xl border border-foreground-muted/15 bg-surface p-5 shadow-(--shadow-ambient-md) sm:mt-6 sm:p-8">
                         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-foreground-muted/15 pb-4">
                             <div>
                                 <h3 className="m-0 font-display text-xl font-bold text-primary">
@@ -728,7 +824,7 @@ export function ProfilePage() {
                                     en Casa Flora.
                                 </p>
                             </div>
-                            <div className="flex flex-wrap items-center gap-3">
+                            <div className="flex flex-wrap items-center gap-2.5">
                                 <Link
                                     href="/booking"
                                     className="inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground no-underline transition hover:opacity-90"
@@ -783,7 +879,7 @@ export function ProfilePage() {
                                 </Link>
                             </div>
                         ) : (
-                            <ul className="m-0 mt-6 list-none divide-y divide-foreground-muted/15 p-0">
+                            <ul className="m-0 mt-5 list-none divide-y divide-foreground-muted/15 p-0">
                                 {bookings.map((booking) => {
                                     const isConfirmed =
                                         booking.status === "confirmed";
@@ -843,16 +939,16 @@ export function ProfilePage() {
                 )}
 
                 {activeSection === "addresses" && (
-                    <div className="mt-6 rounded-2xl border border-foreground-muted/15 bg-surface p-6 shadow-(--shadow-ambient-md) sm:p-8">
+                    <div className="mt-5 rounded-2xl border border-foreground-muted/15 bg-surface p-5 shadow-(--shadow-ambient-md) sm:mt-6 sm:p-8">
                         <div className="flex flex-wrap items-center justify-between gap-4">
                             <div>
                                 <h3 className="m-0 font-display text-xl font-bold text-primary">
                                     Mis Direcciones
                                 </h3>
                                 <p className="m-0 mt-1 text-sm text-foreground-muted">
-                                    Recogida principal configurada en sede Casa
-                                    Flora Medellín (El Poblado) y entrega a
-                                    domicilio en el Valle de Aburrá.
+                                    Dirección Casa • El Poblado y sede principal
+                                    Casa Flora Medellín habilitadas para entrega
+                                    y recogida.
                                 </p>
                             </div>
                             <button
@@ -867,16 +963,16 @@ export function ProfilePage() {
                 )}
 
                 {activeSection === "payments" && (
-                    <div className="mt-6 rounded-2xl border border-foreground-muted/15 bg-surface p-6 shadow-(--shadow-ambient-md) sm:p-8">
+                    <div className="mt-5 rounded-2xl border border-foreground-muted/15 bg-surface p-5 shadow-(--shadow-ambient-md) sm:mt-6 sm:p-8">
                         <div className="flex flex-wrap items-center justify-between gap-4">
                             <div>
                                 <h3 className="m-0 font-display text-xl font-bold text-primary">
                                     Métodos de Pago
                                 </h3>
                                 <p className="m-0 mt-1 text-sm text-foreground-muted">
-                                    Aceptamos pago contra entrega, transferencia
-                                    PSE y tarjetas débito o crédito directamente
-                                    en el restaurante.
+                                    Tarjeta principal Visa **** 4912,
+                                    transferencia PSE y pago contra entrega
+                                    activos.
                                 </p>
                             </div>
                             <button
@@ -891,23 +987,114 @@ export function ProfilePage() {
                 )}
             </section>
 
-            <section aria-labelledby="profile-favorites-heading" className="mt-10">
-                <div className="mb-5 inline-block border-b-2 border-[#e5c5b5] pb-1.5">
-                    <h2
-                        id="profile-favorites-heading"
-                        className="m-0 font-display text-xl font-bold text-primary sm:text-2xl"
-                    >
-                        Tus favoritos de siempre
-                    </h2>
+            <section
+                aria-labelledby="profile-favorites-heading"
+                className="mt-7 sm:mt-10"
+            >
+                <div className="mb-3.5 flex items-end justify-between gap-2 sm:mb-5">
+                    <div className="sm:border-b-2 sm:border-[#e5c5b5] sm:pb-1.5">
+                        <h2
+                            id="profile-favorites-heading"
+                            className="m-0 font-display text-xl font-bold text-primary sm:text-2xl"
+                        >
+                            Tus favoritos de siempre
+                        </h2>
+                        <p className="m-0 mt-0.5 text-xs text-foreground-muted md:hidden">
+                            Último pedido realizado hace 4 días
+                        </p>
+                    </div>
+                    <span className="text-xs font-bold text-[#bc8e56] md:hidden">
+                        Entregado
+                    </span>
                 </div>
 
-                <article className="grid grid-cols-1 overflow-hidden rounded-2xl border border-foreground-muted/10 bg-surface shadow-(--shadow-ambient-md) md:grid-cols-12">
+                <article className="rounded-2xl border border-foreground-muted/10 bg-surface p-4 shadow-(--shadow-ambient-md) md:hidden">
+                    <div className="flex items-center gap-3.5">
+                        <div className="relative size-20 shrink-0 overflow-hidden rounded-xl">
+                            <Image
+                                src={FAVORITE_COMBO_IMAGE}
+                                alt="Combo Familiar Tradición"
+                                fill
+                                sizes="80px"
+                                className="object-cover"
+                            />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <h3 className="m-0 truncate font-display text-base font-bold text-primary">
+                                Combo Familiar Tradición
+                            </h3>
+                            <p className="m-0 mt-0.5 truncate text-xs text-foreground-muted">
+                                12 empanadas de carne desmechada, ají y
+                                guacamole artesanal.
+                            </p>
+                            <div className="mt-2 flex items-center justify-between gap-2">
+                                <span className="text-sm font-extrabold text-foreground">
+                                    $ 45.000 COP
+                                </span>
+                                <span className="text-xs text-foreground-muted">
+                                    Orden #2084
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="my-3.5 border-t border-foreground-muted/12" />
+
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-2 text-xs text-foreground-muted">
+                            <svg
+                                aria-hidden="true"
+                                viewBox="0 0 20 20"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                className="size-4 shrink-0 text-emerald-600"
+                            >
+                                <circle cx="10" cy="10" r="7.5" />
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M7 10.2l2 2 4-4"
+                                />
+                            </svg>
+                            <span className="truncate">
+                                Dirección Casa • El Poblado
+                            </span>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={handleRepeatOrder}
+                            className="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full bg-[#4b151b] px-5 py-2.5 text-xs font-bold text-white shadow-xs transition hover:opacity-95"
+                        >
+                            <svg
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                className="size-4"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M4 4v5h5M20 12a8 8 0 11-2.34-5.66L4 9"
+                                />
+                            </svg>
+                            {repeatOrderFeedback
+                                ? "Redirigiendo..."
+                                : "Repetir Pedido"}
+                        </button>
+                    </div>
+                </article>
+
+                <article className="hidden overflow-hidden rounded-2xl border border-foreground-muted/10 bg-surface shadow-(--shadow-ambient-md) md:grid md:grid-cols-12">
                     <div className="relative min-h-60 md:col-span-5">
                         <Image
                             src={FAVORITE_COMBO_IMAGE}
                             alt="Combo Familiar Tradición con empanadas, ají y guacamole"
                             fill
-                            sizes="(max-width: 768px) 100vw, 42vw"
+                            sizes="42vw"
                             className="object-cover"
                         />
                         <span className="absolute top-4 left-4 rounded-full bg-[#e8cfc8]/90 px-3.5 py-1 text-[10px] font-bold tracking-wider text-[#554242] uppercase backdrop-blur-xs">
@@ -968,6 +1155,19 @@ export function ProfilePage() {
                     </div>
                 </article>
             </section>
+
+            <aside
+                aria-label="Filosofía de Casa Flora"
+                className="mt-7 rounded-2xl border border-[#e8d5b7]/70 bg-[#fbf5e8] px-6 py-5 text-center sm:mt-10 dark:border-foreground-muted/15 dark:bg-background-alt"
+            >
+                <p className="m-0 font-display text-sm/6 text-primary italic sm:text-base">
+                    &ldquo;Alimentarse bien es un placer, un detalle de amor y
+                    una obligación con uno mismo.&rdquo;
+                </p>
+                <p className="m-0 mt-2.5 text-[10px] font-bold tracking-[0.14em] text-[#ad5d4e] uppercase">
+                    COCINA VIRTUAL NACIDA EN MEDELLÍN
+                </p>
+            </aside>
         </div>
     );
 }
