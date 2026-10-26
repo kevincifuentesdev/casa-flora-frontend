@@ -30,6 +30,9 @@ import {
     type Product,
 } from "@/features/products/domain/product";
 import {
+    useAdminNavigation,
+} from "../context/AdminNavigationContext";
+import {
     type BookingAdminSort,
     type OrderStatus,
     cancelAdminBooking,
@@ -45,7 +48,6 @@ import {
     updateAdminProduct,
 } from "../services/adminService";
 
-type AdminSection = "orders" | "bookings" | "products";
 type BookingDayFilterMode = "all" | "today" | "tomorrow" | "next7" | "custom";
 
 interface ProductFormState {
@@ -208,7 +210,7 @@ function formatFavoriteMoment(value: string | null | undefined): string {
 export default function AdminDashboardPage() {
     const { session, isLoading: isSessionLoading } = useSession();
 
-    const [activeSection, setActiveSection] = useState<AdminSection>("orders");
+    const { activeSection, setActiveSection, setCounts } = useAdminNavigation();
     const [feedbackBanner, setFeedbackBanner] = useState<{
         type: "success" | "error";
         message: string;
@@ -453,6 +455,14 @@ export default function AdminDashboardPage() {
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, []);
+
+    useEffect(() => {
+        setCounts({
+            orders: orders.length,
+            bookings: bookings.length,
+            products: products.length,
+        });
+    }, [orders.length, bookings.length, products.length, setCounts]);
 
     const filteredOrders = useMemo(() => {
         return orders.filter((order) => {
@@ -1102,7 +1112,7 @@ export default function AdminDashboardPage() {
     }
 
     return (
-        <div className="mx-auto w-full max-w-(--container-max) px-(--spacing-margin-mobile) py-6 pb-28 md:px-(--spacing-margin-desktop) md:py-8 md:pb-12">
+        <div className="mx-auto w-full max-w-(--container-max) px-(--spacing-margin-mobile) py-5 pb-32 md:px-(--spacing-margin-desktop) md:py-8 md:pb-12">
             <div className="flex flex-col md:flex-row md:items-start md:gap-8">
                 {/* Desktop Sidebar */}
                 <aside
@@ -1236,22 +1246,41 @@ export default function AdminDashboardPage() {
                 </aside>
 
                 {/* Main Content Area */}
-                <main className="min-w-0 flex-1 space-y-6">
-                    {/* Mobile Header (shown only on mobile < md) */}
-                    <header className="rounded-2xl border border-foreground-muted/15 bg-surface p-4 shadow-(--shadow-ambient-sm) md:hidden">
-                        <p className="m-0 text-xs font-bold tracking-wider text-accent uppercase">
-                            Casa Flora • Sede El Poblado
-                        </p>
-                        <h1 className="m-0 mt-1 font-display text-xl font-bold text-primary">
-                            Panel Operativo de Administración
-                        </h1>
-                        <p className="m-0 mt-1 text-xs text-foreground-muted">
-                            Sesión activa como{" "}
-                            <strong className="text-foreground">
-                                {session.user.name}
-                            </strong>
-                        </p>
-                    </header>
+                <div className="min-w-0 flex-1 space-y-6">
+                    {/* Mobile Header Card (shown only on mobile < md) */}
+                    <div className="rounded-2xl border border-foreground-muted/15 bg-surface p-5 shadow-(--shadow-ambient-sm) md:hidden">
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                                <span className="inline-block rounded-full bg-accent/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-accent uppercase">
+                                    Casa Flora • Sede El Poblado
+                                </span>
+                                <h1 className="m-0 mt-2 font-display text-2xl font-bold text-primary">
+                                    Panel Operativo
+                                </h1>
+                                <p className="m-0 mt-1 truncate text-xs text-foreground-muted">
+                                    Sesión activa como{" "}
+                                    <strong className="text-foreground">
+                                        {session.user.name}
+                                    </strong>
+                                    {session.user.email ? ` (${session.user.email})` : ""}
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (activeSection === "orders") void loadOrders();
+                                    else if (activeSection === "bookings") void loadBookings();
+                                    else void loadProducts();
+                                }}
+                                aria-label="Actualizar datos de la sección"
+                                title="Actualizar datos"
+                                className={`inline-flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-foreground-muted/20 bg-background text-primary shadow-xs transition hover:bg-background-alt ${focusRing}`}
+                            >
+                                <Refresh className="size-4 shrink-0" aria-hidden="true" />
+                            </button>
+                        </div>
+                    </div>
 
                     {feedbackBanner && (
                         <div
@@ -2424,93 +2453,8 @@ export default function AdminDashboardPage() {
                     </div>
                 </section>
             )}
-                </main>
+                </div>
             </div>
-
-            {/* Mobile Bottom Navigation (fixed at bottom on < md) */}
-            <nav
-                role="tablist"
-                aria-label="Navegación móvil del panel operativo"
-                className="fixed bottom-0 left-0 right-0 z-40 flex h-16 items-center justify-around border-t border-foreground-muted/15 bg-surface/95 px-2 backdrop-blur-md shadow-(--shadow-ambient-md) md:hidden"
-            >
-                <button
-                    type="button"
-                    role="tab"
-                    aria-selected={activeSection === "orders"}
-                    onClick={() => setActiveSection("orders")}
-                    className={`relative flex min-h-11 flex-1 flex-col items-center justify-center gap-1 rounded-xl py-1 text-xs font-bold transition ${focusRing} ${
-                        activeSection === "orders"
-                            ? "text-primary"
-                            : "text-foreground-muted hover:text-foreground"
-                    }`}
-                >
-                    <div className="relative">
-                        <Receipt2 className="size-5 shrink-0" aria-hidden="true" />
-                        <span
-                            className={`absolute -top-1 -right-2.5 rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
-                                activeSection === "orders"
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-foreground-muted/20 text-foreground"
-                            }`}
-                        >
-                            {orders.length}
-                        </span>
-                    </div>
-                    <span className="text-[11px]">Pedidos</span>
-                </button>
-
-                <button
-                    type="button"
-                    role="tab"
-                    aria-selected={activeSection === "bookings"}
-                    onClick={() => setActiveSection("bookings")}
-                    className={`relative flex min-h-11 flex-1 flex-col items-center justify-center gap-1 rounded-xl py-1 text-xs font-bold transition ${focusRing} ${
-                        activeSection === "bookings"
-                            ? "text-primary"
-                            : "text-foreground-muted hover:text-foreground"
-                    }`}
-                >
-                    <div className="relative">
-                        <Calendar className="size-5 shrink-0" aria-hidden="true" />
-                        <span
-                            className={`absolute -top-1 -right-2.5 rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
-                                activeSection === "bookings"
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-foreground-muted/20 text-foreground"
-                            }`}
-                        >
-                            {bookings.length}
-                        </span>
-                    </div>
-                    <span className="text-[11px]">Reservas</span>
-                </button>
-
-                <button
-                    type="button"
-                    role="tab"
-                    aria-selected={activeSection === "products"}
-                    onClick={() => setActiveSection("products")}
-                    className={`relative flex min-h-11 flex-1 flex-col items-center justify-center gap-1 rounded-xl py-1 text-xs font-bold transition ${focusRing} ${
-                        activeSection === "products"
-                            ? "text-primary"
-                            : "text-foreground-muted hover:text-foreground"
-                    }`}
-                >
-                    <div className="relative">
-                        <ForkKnife className="size-5 shrink-0" aria-hidden="true" />
-                        <span
-                            className={`absolute -top-1 -right-2.5 rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
-                                activeSection === "products"
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-foreground-muted/20 text-foreground"
-                            }`}
-                        >
-                            {products.length}
-                        </span>
-                    </div>
-                    <span className="text-[11px]">Catálogo</span>
-                </button>
-            </nav>
 
             {selectedOrder && (
                 <div

@@ -1,15 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Category, User } from "reicon-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Calendar, ForkKnife, Receipt2, User } from "reicon-react";
 
+import {
+    type AdminSection,
+    useAdminNavigation,
+} from "@/features/admin/services/adminNavigation";
 import { useSession } from "@/features/auth/hooks/useSession";
 import { navLinks } from "../services/navigation";
 
+const adminSections: {
+    id: AdminSection;
+    label: string;
+    icon: typeof Receipt2;
+}[] = [
+    { id: "orders", label: "Pedidos", icon: Receipt2 },
+    { id: "bookings", label: "Reservas", icon: Calendar },
+    { id: "products", label: "Catálogo", icon: ForkKnife },
+];
+
 export default function BottomNavbar() {
     const pathname = usePathname();
+    const router = useRouter();
     const { session, isLoading } = useSession();
+    const { activeSection, counts, setActiveSection } = useAdminNavigation();
     const isAdmin = session?.user?.role === "admin";
 
     if (pathname === "/onboarding") {
@@ -24,22 +40,57 @@ export default function BottomNavbar() {
             <div className="flex h-20 items-center justify-around px-3 py-0 pb-[env(safe-area-inset-bottom)]">
                 {isAdmin ? (
                     <>
-                        <Link
-                            href="/admin"
-                            className={`flex flex-col items-center justify-center rounded-xl px-4 py-1 no-underline text-foreground-muted transition duration-150 ease-in-out active:scale-95 ${
-                                pathname === "/admin"
-                                    ? "bg-[#ffddb84d] font-bold text-primary"
-                                    : "hover:text-primary"
-                            }`}
-                        >
-                            <Category className="size-6 shrink-0" aria-hidden="true" />
-                            <span className="mt-1 font-body text-[0.75rem]/4 font-semibold">
-                                Dashboard
-                            </span>
-                        </Link>
+                        {adminSections.map((section) => {
+                            const Icon = section.icon;
+                            const isActive =
+                                pathname === "/admin" &&
+                                activeSection === section.id;
+                            const count = counts[section.id];
+
+                            return (
+                                <button
+                                    key={section.id}
+                                    type="button"
+                                    onClick={() => {
+                                        setActiveSection(section.id);
+                                        if (pathname !== "/admin") {
+                                            router.push(`/admin?section=${section.id}`);
+                                        }
+                                    }}
+                                    aria-current={isActive ? "page" : undefined}
+                                    className={`relative flex min-h-11 cursor-pointer flex-col items-center justify-center rounded-xl border-0 bg-transparent px-3 py-1 text-foreground-muted transition duration-150 ease-in-out active:scale-95 ${
+                                        isActive
+                                            ? "bg-[#ffddb84d]! font-bold text-primary!"
+                                            : "hover:text-primary"
+                                    }`}
+                                >
+                                    <div className="relative">
+                                        <Icon
+                                            className="size-6 shrink-0"
+                                            aria-hidden="true"
+                                        />
+                                        {count > 0 && (
+                                            <span
+                                                aria-hidden="true"
+                                                className={`absolute -top-1 -right-2.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold ${
+                                                    isActive
+                                                        ? "bg-primary text-primary-foreground"
+                                                        : "bg-foreground-muted/20 text-foreground"
+                                                }`}
+                                            >
+                                                {count > 99 ? "99+" : count}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <span className="mt-1 font-body text-[0.75rem]/4 font-semibold">
+                                        {section.label}
+                                    </span>
+                                </button>
+                            );
+                        })}
                         <Link
                             href="/profile"
-                            className={`flex flex-col items-center justify-center rounded-xl px-4 py-1 no-underline text-foreground-muted transition duration-150 ease-in-out active:scale-95 ${
+                            className={`flex min-h-11 flex-col items-center justify-center rounded-xl px-3 py-1 no-underline text-foreground-muted transition duration-150 ease-in-out active:scale-95 ${
                                 pathname === "/profile"
                                     ? "bg-[#ffddb84d] font-bold text-primary"
                                     : "hover:text-primary"
