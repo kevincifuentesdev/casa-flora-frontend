@@ -28,6 +28,10 @@ import {
     fetchMyBookings,
 } from "@/features/booking/services/bookingService";
 import { useCart } from "@/features/cart/hooks/useCart";
+import {
+    cancelPendingCartOrder,
+    verifyCartCheckoutPayment,
+} from "@/features/cart/services/checkoutService";
 import { ApiClientError } from "@/features/common/services/apiClient";
 import { formatPrice, type Product } from "@/features/products/domain/product";
 
@@ -133,6 +137,15 @@ export function ProfilePage() {
     const [isLoadingBookings, setIsLoadingBookings] = useState(true);
     const [bookingsError, setBookingsError] = useState<string | null>(null);
     const [cancellingId, setCancellingId] = useState<string | null>(null);
+    const [verifyingOrderId, setVerifyingOrderId] = useState<string | null>(
+        null,
+    );
+    const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(
+        null,
+    );
+    const [orderActionMessage, setOrderActionMessage] = useState<string | null>(
+        null,
+    );
 
     const draft: ProfileFormDraft = {
         firstName: overrides.firstName ?? session?.user?.firstName ?? "",
@@ -438,6 +451,54 @@ export function ProfilePage() {
         router.push("/");
     };
 
+    const handleVerifyPendingOrder = async (orderId: string) => {
+        setVerifyingOrderId(orderId);
+        setOrderActionMessage(null);
+        const res = await verifyCartCheckoutPayment({
+            externalReference: orderId,
+        });
+        setVerifyingOrderId(null);
+
+        if (res.error || !res.verification) {
+            setOrderActionMessage(
+                res.error ??
+                    "No se pudo verificar el estado en Mercado Pago en este momento.",
+            );
+            return;
+        }
+
+        await refreshSession();
+
+        if (res.verification.status === "approved") {
+            setOrderActionMessage(
+                "¡Pago verificado y aprobado! Tus puntos han sido acreditados.",
+            );
+        } else if (res.verification.status === "rejected") {
+            setOrderActionMessage(
+                "El pago fue reportado como rechazado o cancelado por Mercado Pago.",
+            );
+        } else {
+            setOrderActionMessage(
+                "Mercado Pago aún reporta este pedido como pendiente de pago.",
+            );
+        }
+    };
+
+    const handleCancelPendingOrder = async (orderId: string) => {
+        setCancellingOrderId(orderId);
+        setOrderActionMessage(null);
+        const res = await cancelPendingCartOrder(orderId);
+        setCancellingOrderId(null);
+
+        if (res.error) {
+            setOrderActionMessage(res.error);
+            return;
+        }
+
+        await refreshSession();
+        setOrderActionMessage("El pedido pendiente ha sido cancelado.");
+    };
+
     const handleAddFeaturedToCart = (dish: {
         productId: string;
         name: string;
@@ -511,7 +572,13 @@ export function ProfilePage() {
         addresses.find((a) => a.isDefault) ?? addresses[0] ?? null;
     const defaultPayment =
         paymentMethods.find((p) => p.isDefault) ?? paymentMethods[0] ?? null;
-    const latestOrder = orders[0] ?? null;
+    const confirmedOrders = orders.filter(
+        (o) => o.status === "preparing" || o.status === "delivered",
+    );
+    const pendingOrdersCount = orders.filter(
+        (o) => o.status === "pending",
+    ).length;
+    const latestOrder = confirmedOrders[0] ?? null;
     const latestOrderItem = latestOrder?.items[0] ?? null;
     const recommendedProduct = user.recommendedProduct;
 
@@ -526,7 +593,7 @@ export function ProfilePage() {
               statusLabel:
                   latestOrder.status === "delivered"
                       ? "Entregado"
-                      : "En preparación",
+                      : "Pago aprobado • En preparación",
               subtitle: formatRelativeOrderDate(latestOrder.createdAt),
               addressLabel: latestOrder.addressLabel,
               badgeLabel: "ÚLTIMO PEDIDO",
@@ -573,11 +640,13 @@ export function ProfilePage() {
         : "Sin configurar";
 
     const ordersSubtitle =
-        orders.length > 0
-            ? `${orders.length} ${orders.length === 1 ? "orden" : "órdenes"}`
-            : confirmedBookingsCount > 0
-              ? `${confirmedBookingsCount} ${confirmedBookingsCount === 1 ? "reserva" : "reservas"}`
-              : "Sin pedidos";
+        pendingOrdersCount > 0
+            ? `${pendingOrdersCount} pendiente${pendingOrdersCount === 1 ? "" : "s"} de pago`
+            : confirmedOrders.length > 0
+              ? `${confirmedOrders.length} ${confirmedOrders.length === 1 ? "orden pagada" : "órdenes pagadas"}`
+              : confirmedBookingsCount > 0
+                ? `${confirmedBookingsCount} ${confirmedBookingsCount === 1 ? "reserva" : "reservas"}`
+                : "Sin pedidos";
 
     const preferencesSubtitle =
         user.preferences.dietPreference === "trees"
@@ -618,7 +687,15 @@ export function ProfilePage() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2.5 sm:flex sm:shrink-0 sm:items-center lg:mt-5 lg:w-full lg:justify-center">
+                    <div className="grid grid-cols-2 gap-2.5 sm:flex sm:shrink-0 sm:flex-wrap sm:items-center lg:mt-5 lg:w-full lg:justify-center">
+                        {user.role === "admin" && (
+                            <Link
+                                href="/admin"
+                                className={`col-span-2 inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground no-underline transition hover:opacity-90 ${focusRing}`}
+                            >
+                                Panel de Administración
+                            </Link>
+                        )}
                         <button
                             type="button"
                             onClick={() => openModal("edit-profile")}
@@ -1694,6 +1771,14 @@ export function ProfilePage() {
                                     <h3 className="m-0 font-display text-base font-bold text-primary">
                                         Pedidos realizados ({orders.length})
                                     </h3>
+                                    {orderActionMessage && (
+                                        <p
+                                            role="status"
+                                            className="mt-2.5 rounded-lg border border-accent/35 bg-accent/10 px-3.5 py-2 text-xs font-medium text-primary"
+                                        >
+                                            {orderActionMessage}
+                                        </p>
+                                    )}
                                     {orders.length === 0 ? (
                                         <p className="mt-2 rounded-xl border border-foreground-muted/15 bg-background p-4 text-xs text-foreground-muted">
                                             Aún no has realizado pedidos. Compra
@@ -1702,49 +1787,150 @@ export function ProfilePage() {
                                         </p>
                                     ) : (
                                         <ul className="m-0 mt-2.5 list-none divide-y divide-foreground-muted/15 p-0">
-                                            {orders.map((order) => (
-                                                <li
-                                                    key={order.id}
-                                                    className="flex flex-wrap items-center justify-between gap-3 py-3"
-                                                >
-                                                    <div>
-                                                        <p className="m-0 font-display text-sm font-bold text-primary">
-                                                            Orden #
-                                                            {order.orderNumber}:{" "}
-                                                            {order.items
-                                                                .map(
-                                                                    (i) =>
-                                                                        `${i.quantity}x ${i.productName}`,
+                                            {orders.map((order) => {
+                                                const isConfirmed =
+                                                    order.status ===
+                                                        "preparing" ||
+                                                    order.status ===
+                                                        "delivered";
+                                                const isPending =
+                                                    order.status === "pending";
+                                                const statusLabel =
+                                                    order.status === "preparing"
+                                                        ? "Pago aprobado • En preparación"
+                                                        : order.status ===
+                                                            "delivered"
+                                                          ? "Entregado"
+                                                          : order.status ===
+                                                              "pending"
+                                                            ? "Pendiente de pago"
+                                                            : "Cancelado";
+                                                const statusBadgeClass =
+                                                    isConfirmed
+                                                        ? "border-primary/25 bg-primary/10 text-primary"
+                                                        : isPending
+                                                          ? "border-accent/40 bg-accent/15 text-primary"
+                                                          : "border-destructive/30 bg-destructive/10 text-destructive";
+
+                                                return (
+                                                    <li
+                                                        key={order.id}
+                                                        className="flex flex-wrap items-start justify-between gap-3 py-3.5"
+                                                    >
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <p className="m-0 font-display text-sm font-bold text-primary">
+                                                                    Orden #
+                                                                    {
+                                                                        order.orderNumber
+                                                                    }
+                                                                    :{" "}
+                                                                    {order.items
+                                                                        .map(
+                                                                            (
+                                                                                i,
+                                                                            ) =>
+                                                                                `${i.quantity}x ${i.productName}`,
+                                                                        )
+                                                                        .join(
+                                                                            ", ",
+                                                                        )}
+                                                                </p>
+                                                                <span
+                                                                    className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${statusBadgeClass}`}
+                                                                >
+                                                                    {
+                                                                        statusLabel
+                                                                    }
+                                                                </span>
+                                                            </div>
+                                                            <p className="m-0 mt-1 text-xs text-foreground-muted">
+                                                                {
+                                                                    order.addressLabel
+                                                                }{" "}
+                                                                (
+                                                                {
+                                                                    order.paymentSummary
+                                                                }
                                                                 )
-                                                                .join(", ")}
-                                                        </p>
-                                                        <p className="m-0 mt-0.5 text-xs text-foreground-muted">
-                                                            {
-                                                                order.addressLabel
-                                                            }{" "}
-                                                            (
-                                                            {
-                                                                order.paymentSummary
-                                                            }
-                                                            )
-                                                        </p>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <span className="block text-sm font-bold text-foreground">
-                                                            {formatPrice(
-                                                                order.totalAmount,
+                                                            </p>
+                                                            {isPending && (
+                                                                <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                                                                    <button
+                                                                        type="button"
+                                                                        disabled={
+                                                                            verifyingOrderId ===
+                                                                                order.id ||
+                                                                            cancellingOrderId ===
+                                                                                order.id
+                                                                        }
+                                                                        onClick={() => {
+                                                                            void handleVerifyPendingOrder(
+                                                                                order.id,
+                                                                            );
+                                                                        }}
+                                                                        className={`inline-flex items-center rounded-full bg-primary px-3.5 py-1.5 text-xs font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-60 ${focusRing}`}
+                                                                    >
+                                                                        {verifyingOrderId ===
+                                                                        order.id
+                                                                            ? "Verificando con Mercado Pago..."
+                                                                            : "Verificar pago"}
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        disabled={
+                                                                            verifyingOrderId ===
+                                                                                order.id ||
+                                                                            cancellingOrderId ===
+                                                                                order.id
+                                                                        }
+                                                                        onClick={() => {
+                                                                            void handleCancelPendingOrder(
+                                                                                order.id,
+                                                                            );
+                                                                        }}
+                                                                        className={`inline-flex items-center rounded-full border border-foreground-muted/30 px-3.5 py-1.5 text-xs font-semibold text-foreground-muted transition hover:text-destructive disabled:opacity-60 ${focusRing}`}
+                                                                    >
+                                                                        {cancellingOrderId ===
+                                                                        order.id
+                                                                            ? "Cancelando..."
+                                                                            : "Cancelar"}
+                                                                    </button>
+                                                                </div>
                                                             )}
-                                                        </span>
-                                                        <span className="text-xs font-semibold text-accent">
-                                                            +
-                                                            {
-                                                                order.pointsEarned
-                                                            }{" "}
-                                                            pts
-                                                        </span>
-                                                    </div>
-                                                </li>
-                                            ))}
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <span className="block text-sm font-bold text-foreground">
+                                                                {formatPrice(
+                                                                    order.totalAmount,
+                                                                )}
+                                                            </span>
+                                                            {isConfirmed ? (
+                                                                <span className="text-xs font-semibold text-accent">
+                                                                    +
+                                                                    {
+                                                                        order.pointsEarned
+                                                                    }{" "}
+                                                                    pts acreditados
+                                                                </span>
+                                                            ) : isPending ? (
+                                                                <span className="text-xs font-medium text-foreground-muted">
+                                                                    +
+                                                                    {
+                                                                        order.pointsEarned
+                                                                    }{" "}
+                                                                    pts al
+                                                                    confirmar
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-xs font-medium text-foreground-muted">
+                                                                    0 pts
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </li>
+                                                );
+                                            })}
                                         </ul>
                                     )}
                                 </div>

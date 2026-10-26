@@ -174,6 +174,10 @@ function mapBetterAuthUser(
             (typeof rawUser.email === "string" && rawUser.email) ||
             fallback.email ||
             "",
+        role:
+            rawUser.role === "admin"
+                ? "admin"
+                : (fallback.role ?? "customer"),
         points,
         onboardingCompleted:
             typeof rawUser.onboardingCompleted === "boolean"

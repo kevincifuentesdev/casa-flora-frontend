@@ -52,6 +52,14 @@ export interface OrderItemRecord {
     quantity: number;
 }
 
+export interface OrderCustomerSummary {
+    id: string;
+    name: string;
+    email: string;
+    username: string | null;
+    points: number;
+}
+
 export interface OrderRecord {
     id: string;
     orderNumber: number;
@@ -60,11 +68,14 @@ export interface OrderRecord {
     paymentSummary: string;
     totalAmount: number;
     pointsEarned: number;
-    status: "delivered" | "preparing" | "cancelled";
+    status: "pending" | "preparing" | "delivered" | "cancelled";
     items: OrderItemRecord[];
+    customer?: OrderCustomerSummary;
     createdAt: string;
     updatedAt: string;
 }
+
+export type UserRole = "customer" | "admin";
 
 export interface SessionUser {
     id: string;
@@ -74,6 +85,7 @@ export interface SessionUser {
     birthDate: string;
     username: string;
     email: string;
+    role: UserRole;
     points: number;
     onboardingCompleted: boolean;
     preferences: UserPreferences;

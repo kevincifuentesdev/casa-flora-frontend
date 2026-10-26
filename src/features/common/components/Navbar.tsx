@@ -6,6 +6,7 @@ import { startTransition, useEffect, useState } from "react";
 
 import { Moon, CartLarge5 } from "reicon-react";
 import SessionActions from "@/features/auth/components/SessionActions";
+import { useSession } from "@/features/auth/hooks/useSession";
 import { useCart } from "@/features/cart/hooks/useCart";
 import Button from "./Button";
 import { navLinks } from "../services/navigation";
@@ -13,6 +14,8 @@ import { navLinks } from "../services/navigation";
 export default function Navbar() {
     const pathname = usePathname();
     const { totalItems, openCart } = useCart();
+    const { session } = useSession();
+    const isAdmin = session?.user?.role === "admin";
 
     const [darkTheme, setDarkTheme] = useState(false);
 
@@ -83,6 +86,29 @@ export default function Navbar() {
                             </Link>
                         );
                     })}
+                    {isAdmin && (
+                        <Link
+                            href="/admin"
+                            className={[
+                                "relative px-0 py-1.5",
+                                "font-body text-sm/5 tracking-wider text-foreground-muted no-underline",
+                                "transition-colors duration-300 ease-in-out",
+                                "after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5",
+                                "after:origin-center after:scale-x-0 after:bg-primary",
+                                "after:transition-transform after:duration-300 after:ease-in-out",
+                                "hover:text-primary hover:after:scale-x-100",
+                                pathname === "/admin" &&
+                                    "font-bold text-primary after:scale-x-100",
+                            ]
+                                .filter(Boolean)
+                                .join(" ")}
+                            aria-current={
+                                pathname === "/admin" ? "page" : undefined
+                            }
+                        >
+                            Administración
+                        </Link>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-1 md:gap-2">
