@@ -1,14 +1,41 @@
-import type { BookingDraft, BookingErrors } from "../domain/types";
+import {
+    ApiClientError,
+    apiRequest,
+} from "@/features/common/services/apiClient";
+import type {
+    BookingDraft,
+    BookingErrors,
+    BookingRecord,
+    EnvironmentId,
+    SlotAvailability,
+} from "../domain/types";
 import { validateBooking } from "../domain/validation";
 
 export type SubmitBookingResult =
-    | { ok: true }
-    | { ok: false; errors: BookingErrors };
+    | { ok: true; booking: BookingRecord }
+    | {
+          ok: false;
+          errors: BookingErrors;
+          serverError?: string;
+          requiresAuth?: boolean;
+      };
 
-/**
- * Stub: for now it only validates the draft (like the original CTA).
- * Later it should POST the draft to the backend reservations endpoint.
- */
+export async function fetchBookingAvailability(
+    date: string,
+    environment: EnvironmentId,
+): Promise<SlotAvailability[]> {
+    const params = new URLSearchParams({ date, environment });
+    const response = await apiRequest<{
+        data: {
+            date: string;
+            environment: EnvironmentId;
+            slots: SlotAvailability[];
+        };
+    }>(`/api/bookings/availability?${params.toString()}`);
+
+    return response.data.slots;
+}
+
 export async function submitBooking(
     draft: BookingDraft,
 ): Promise<SubmitBookingResult> {
@@ -18,6 +45,83 @@ export async function submitBooking(
         return { ok: false, errors };
     }
 
-    // TODO: call the backend (e.g. fetch(`${API_URL}/bookings`, { method: "POST", ... })).
-    return { ok: true };
+    try {
+        const response = await apiRequest<{ data: BookingRecord }>(
+            "/api/bookings",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    environment: draft.environment,
+                    date: draft.date,
+                    time: draft.time,
+                    diners: draft.diners,
+                }),
+            },
+        );
+
+        return { ok: true, booking: response.data };
+    } catch (error) {
+        if (error instanceof ApiClientError) {
+            if (error.status === 401) {
+                return {
+                    ok: false,
+                    errors: {},
+                    requiresAuth: true,
+                    serverError:
+                        "Inicia sesión en tu cuenta para confirmar la reserva.",
+                };
+            }
+
+            const fieldErrors: BookingErrors = {};
+            if (error.details) {
+                for (const key of [
+                    "environment",
+                    "date",
+                    "time",
+                    "diners",
+                ] as const) {
+                    if (error.details[key]) {
+                        fieldErrors[key] = error.details[key];
+                    }
+                }
+            }
+
+            if (
+                error.code === "BOOKING_CAPACITY_EXCEEDED" ||
+                error.code === "BOOKING_ALREADY_EXISTS"
+            ) {
+                fieldErrors.time = error.message;
+            }
+
+            return {
+                ok: false,
+                errors: fieldErrors,
+                serverError: error.message,
+            };
+        }
+
+        return {
+            ok: false,
+            errors: {},
+            serverError:
+                "No fue posible conectar con el servidor de reservas. Intenta nuevamente.",
+        };
+    }
+}
+
+export async function fetchMyBookings(): Promise<BookingRecord[]> {
+    const response = await apiRequest<{ data: BookingRecord[] }>(
+        "/api/bookings/me",
+    );
+    return response.data;
+}
+
+export async function cancelMyBooking(id: string): Promise<BookingRecord> {
+    const response = await apiRequest<{ data: BookingRecord }>(
+        `/api/bookings/${encodeURIComponent(id)}/cancel`,
+        {
+            method: "PATCH",
+        },
+    );
+    return response.data;
 }

@@ -16,7 +16,6 @@ export type TimeSlotGroup = {
 
 export type BookingDraft = {
     environment: EnvironmentId | null;
-    /** ISO string of the selected day (local midnight), or null. */
     date: string | null;
     time: string | null;
     diners: number;
@@ -27,9 +26,27 @@ export type BookingErrors = Partial<Record<BookingField, string>>;
 export type CalendarCell = {
     key: string;
     day: number;
-    /** Disabled cells: days of adjacent months and past days. */
     muted: boolean;
     isToday: boolean;
-    /** ISO date; only present for selectable days. */
     iso?: string;
 };
+
+export interface SlotAvailability {
+    time: string;
+    capacity: number;
+    reservedDiners: number;
+    remainingDiners: number;
+    available: boolean;
+}
+
+export interface BookingRecord {
+    id: string;
+    userId: string;
+    environment: EnvironmentId;
+    date: string;
+    time: string;
+    diners: number;
+    status: "confirmed" | "cancelled";
+    createdAt: string;
+    updatedAt: string;
+}
