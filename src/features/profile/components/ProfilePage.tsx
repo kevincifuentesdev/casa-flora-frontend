@@ -7,15 +7,29 @@ import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
 
 import { validateSignUpField } from "@/features/auth/domain/authValidation";
-import type { SignUpDraft } from "@/features/auth/domain/session";
+import type {
+    DietPreference,
+    FavoriteMoment,
+    PaymentMethodType,
+    SignUpDraft,
+    SpiceTolerance,
+} from "@/features/auth/domain/session";
 import { useSession } from "@/features/auth/hooks/useSession";
-import { updateUserProfile } from "@/features/auth/services/authService";
+import {
+    addUserAddress,
+    addUserPaymentMethod,
+    createCustomerOrder,
+    removeUserAddress,
+    removeUserPaymentMethod,
+    updateUserProfile,
+} from "@/features/auth/services/authService";
 import type { BookingRecord } from "@/features/booking/domain/types";
 import {
     cancelMyBooking,
     fetchMyBookings,
 } from "@/features/booking/services/bookingService";
 import { ApiClientError } from "@/features/common/services/apiClient";
+import { formatPrice } from "@/features/products/domain/product";
 
 type ProfileFormDraft = {
     firstName: string;
@@ -41,9 +55,6 @@ const PROFILE_FIELDS: readonly ProfileField[] = [
     "username",
 ];
 
-const FAVORITE_COMBO_IMAGE =
-    "https://lh3.googleusercontent.com/aida-public/AB6AXuCXSP_B-LGu-sMyt5QJu1AgpgAXmbzX3nkEDohVFQ0O-C9dXLOWTGSQGnrxJmnXhTrpsoEgizAb-uxK7YZWfZwcXYkMUzp7QTCu8JDbDYEbSNOYttMfvtU_Mk2zvg1wEDFYoZnwzMk61LqyM7gFOR3wpkkL-uk8_q_jelEOPAepyj_tYq6sz3g0kSnH9clcfuOXhXA9rsg8YA2xx2r0VNETWF09CKsY0IFzkraCyKIV-7Dk8JzxH7L_";
-
 function validateProfileDraft(draft: ProfileFormDraft): ProfileErrors {
     const signUpAdapter: SignUpDraft = {
         ...draft,
@@ -67,6 +78,16 @@ function formatEnvironmentLabel(
     return environment === "patio" ? "Patio interior" : "Salón principal";
 }
 
+function formatRelativeOrderDate(isoDate: string): string {
+    const parsed = new Date(isoDate);
+    if (Number.isNaN(parsed.getTime())) return "Pedido reciente";
+    const diffMs = Date.now() - parsed.getTime();
+    const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+    if (diffDays === 0) return "Último pedido realizado hoy";
+    if (diffDays === 1) return "Último pedido realizado ayer";
+    return `Último pedido realizado hace ${diffDays} días`;
+}
+
 export function ProfilePage() {
     const router = useRouter();
     const { session, isLoading: isSessionLoading, logout, refreshSession } =
@@ -75,16 +96,42 @@ export function ProfilePage() {
     const [activeSection, setActiveSection] =
         useState<ActiveActionSection>(null);
     const [overrides, setOverrides] = useState<Partial<ProfileFormDraft>>({});
+    const [dietOverride, setDietOverride] = useState<
+        DietPreference | null | undefined
+    >(undefined);
+    const [spiceOverride, setSpiceOverride] = useState<
+        SpiceTolerance | null | undefined
+    >(undefined);
+    const [momentOverride, setMomentOverride] = useState<
+        FavoriteMoment | null | undefined
+    >(undefined);
+
     const [fieldErrors, setFieldErrors] = useState<ProfileErrors>({});
     const [profileMessage, setProfileMessage] = useState<string | null>(null);
     const [profileError, setProfileError] = useState<string | null>(null);
     const [isSavingProfile, setIsSavingProfile] = useState(false);
 
+    const [newAddressLabel, setNewAddressLabel] = useState("Casa");
+    const [newAddressLine, setNewAddressLine] = useState("");
+    const [newNeighborhood, setNewNeighborhood] = useState("");
+    const [newAddressDetails, setNewAddressDetails] = useState("");
+    const [addressError, setAddressError] = useState<string | null>(null);
+    const [isSavingAddress, setIsSavingAddress] = useState(false);
+
+    const [newPaymentType, setNewPaymentType] =
+        useState<PaymentMethodType>("card");
+    const [newPaymentBrand, setNewPaymentBrand] = useState("Visa");
+    const [newPaymentLastFour, setNewPaymentLastFour] = useState("");
+    const [paymentError, setPaymentError] = useState<string | null>(null);
+    const [isSavingPayment, setIsSavingPayment] = useState(false);
+
     const [bookings, setBookings] = useState<BookingRecord[]>([]);
     const [isLoadingBookings, setIsLoadingBookings] = useState(true);
     const [bookingsError, setBookingsError] = useState<string | null>(null);
     const [cancellingId, setCancellingId] = useState<string | null>(null);
-    const [repeatOrderFeedback, setRepeatOrderFeedback] = useState(false);
+
+    const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+    const [orderBanner, setOrderBanner] = useState<string | null>(null);
 
     const draft: ProfileFormDraft = {
         firstName: overrides.firstName ?? session?.user?.firstName ?? "",
@@ -92,6 +139,19 @@ export function ProfilePage() {
         birthDate: overrides.birthDate ?? session?.user?.birthDate ?? "",
         username: overrides.username ?? session?.user?.username ?? "",
     };
+
+    const selectedDiet =
+        dietOverride !== undefined
+            ? dietOverride
+            : (session?.user?.preferences?.dietPreference ?? null);
+    const selectedSpice =
+        spiceOverride !== undefined
+            ? spiceOverride
+            : (session?.user?.preferences?.spiceTolerance ?? null);
+    const selectedMoment =
+        momentOverride !== undefined
+            ? momentOverride
+            : (session?.user?.preferences?.favoriteMoment ?? null);
 
     const loadBookings = useCallback(async () => {
         if (!session?.user) {
@@ -167,6 +227,8 @@ export function ProfilePage() {
         setActiveSection((prev) => (prev === section ? null : section));
         setProfileMessage(null);
         setProfileError(null);
+        setAddressError(null);
+        setPaymentError(null);
     };
 
     const handleFieldChange = (field: ProfileField, value: string) => {
@@ -193,6 +255,9 @@ export function ProfilePage() {
             lastName: draft.lastName.trim(),
             birthDate: draft.birthDate,
             username: draft.username.trim(),
+            dietPreference: selectedDiet,
+            spiceTolerance: selectedSpice,
+            favoriteMoment: selectedMoment,
         });
         setIsSavingProfile(false);
 
@@ -203,7 +268,96 @@ export function ProfilePage() {
 
         await refreshSession();
         setOverrides({});
-        setProfileMessage("Tus datos personales han sido actualizados.");
+        setDietOverride(undefined);
+        setSpiceOverride(undefined);
+        setMomentOverride(undefined);
+        setProfileMessage(
+            "Tus datos y preferencias culinarias han sido actualizados.",
+        );
+    };
+
+    const handleAddAddress = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setAddressError(null);
+
+        if (
+            newAddressLine.trim().length < 5 ||
+            newNeighborhood.trim().length < 2
+        ) {
+            setAddressError("Ingresa una dirección válida y el barrio.");
+            return;
+        }
+
+        setIsSavingAddress(true);
+        const res = await addUserAddress({
+            label: newAddressLabel.trim() || "Casa",
+            addressLine: newAddressLine.trim(),
+            neighborhood: newNeighborhood.trim(),
+            city: "Medellín, Antioquia",
+            details: newAddressDetails.trim() || null,
+            isDefault: true,
+        });
+        setIsSavingAddress(false);
+
+        if (res.error) {
+            setAddressError(res.error);
+            return;
+        }
+
+        setNewAddressLine("");
+        setNewNeighborhood("");
+        setNewAddressDetails("");
+    };
+
+    const handleRemoveAddress = async (addressId: string) => {
+        setAddressError(null);
+        const res = await removeUserAddress(addressId);
+        if (!res.ok && res.error) {
+            setAddressError(res.error);
+        }
+    };
+
+    const handleAddPayment = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setPaymentError(null);
+
+        if (
+            newPaymentType === "card" &&
+            !/^\d{4}$/.test(newPaymentLastFour.trim())
+        ) {
+            setPaymentError("Ingresa los últimos 4 dígitos de tu tarjeta.");
+            return;
+        }
+
+        setIsSavingPayment(true);
+        const brand =
+            newPaymentType === "cash"
+                ? "Efectivo contra entrega"
+                : newPaymentBrand.trim();
+        const res = await addUserPaymentMethod({
+            type: newPaymentType,
+            brand,
+            lastFour:
+                newPaymentType === "card" ? newPaymentLastFour.trim() : null,
+            holderName: session?.user?.name || null,
+            isDefault: true,
+        });
+        setIsSavingPayment(false);
+
+        if (res.error) {
+            setPaymentError(res.error);
+            return;
+        }
+
+        setNewPaymentLastFour("");
+    };
+
+    const handleRemovePayment = async (paymentMethodId: string) => {
+        setPaymentError(null);
+        const res = await removeUserPaymentMethod(paymentMethodId);
+        if (!res.ok && res.error) {
+            setPaymentError(res.error);
+        }
     };
 
     const handleCancelBooking = async (bookingId: string) => {
@@ -231,11 +385,26 @@ export function ProfilePage() {
         router.push("/");
     };
 
-    const handleRepeatOrder = () => {
-        setRepeatOrderFeedback(true);
-        setTimeout(() => {
-            router.push("/menu");
-        }, 700);
+    const handleBuyFeaturedProduct = async (productId: string) => {
+        if (isPlacingOrder) return;
+        setIsPlacingOrder(true);
+        setOrderBanner(null);
+
+        const result = await createCustomerOrder({
+            items: [{ productId, quantity: 1 }],
+        });
+        setIsPlacingOrder(false);
+
+        if (result.error) {
+            setOrderBanner(result.error);
+            return;
+        }
+
+        if (result.order) {
+            setOrderBanner(
+                `¡Pedido #${result.order.orderNumber} confirmado! Sumaste +${result.order.pointsEarned} puntos en tu cuenta.`,
+            );
+        }
     };
 
     if (isSessionLoading) {
@@ -282,10 +451,83 @@ export function ProfilePage() {
         );
     }
 
-    const displayName = session.user.firstName?.trim() || "Comensal";
+    const { user } = session;
+    const displayName = user.firstName?.trim() || "Comensal";
+    const loyalty = user.loyalty;
+    const addresses = user.addresses ?? [];
+    const paymentMethods = user.paymentMethods ?? [];
+    const orders = user.orders ?? [];
+    const defaultAddress =
+        addresses.find((a) => a.isDefault) ?? addresses[0] ?? null;
+    const defaultPayment =
+        paymentMethods.find((p) => p.isDefault) ?? paymentMethods[0] ?? null;
+    const latestOrder = orders[0] ?? null;
+    const latestOrderItem = latestOrder?.items[0] ?? null;
+    const recommendedProduct = user.recommendedProduct;
+
+    const featuredDish = latestOrderItem
+        ? {
+              productId: latestOrderItem.productId,
+              name: latestOrderItem.productName,
+              description: latestOrderItem.productDescription,
+              imageUrl: latestOrderItem.productImageUrl,
+              price: latestOrder.totalAmount,
+              orderNumber: latestOrder.orderNumber,
+              statusLabel:
+                  latestOrder.status === "delivered"
+                      ? "Entregado"
+                      : "En preparación",
+              subtitle: formatRelativeOrderDate(latestOrder.createdAt),
+              addressLabel: latestOrder.addressLabel,
+              badgeLabel: "ÚLTIMO PEDIDO",
+              ctaLabel: "Repetir Pedido",
+          }
+        : recommendedProduct
+          ? {
+                productId: recommendedProduct.id,
+                name: recommendedProduct.name,
+                description: recommendedProduct.description,
+                imageUrl: recommendedProduct.imageUrl,
+                price: recommendedProduct.price,
+                orderNumber: null,
+                statusLabel: "Recomendado para ti",
+                subtitle:
+                    user.preferences.dietPreference === "trees"
+                        ? "Seleccionado según tu preferencia vegetal"
+                        : user.preferences.dietPreference === "cows"
+                          ? "Seleccionado según tu gusto por la sazón tradicional"
+                          : "Sugerencia especial del chef de Casa Flora",
+                addressLabel: defaultAddress
+                    ? `Dirección ${defaultAddress.label} • ${defaultAddress.neighborhood}`
+                    : "Recogida en local • El Poblado",
+                badgeLabel: "RECOMENDADO PARA TI",
+                ctaLabel: "Pedir Ahora",
+            }
+          : null;
+
     const confirmedBookingsCount = bookings.filter(
         (b) => b.status === "confirmed",
     ).length;
+
+    const addressesSubtitle =
+        addresses.length === 0
+            ? "Sin guardar"
+            : addresses.length === 1
+              ? "1 guardada"
+              : `${addresses.length} guardadas`;
+
+    const paymentSubtitle = defaultPayment
+        ? defaultPayment.lastFour
+            ? `${defaultPayment.brand} **** ${defaultPayment.lastFour}`
+            : defaultPayment.brand
+        : "Sin configurar";
+
+    const ordersSubtitle =
+        orders.length > 0
+            ? `${orders.length} ${orders.length === 1 ? "orden" : "órdenes"}`
+            : confirmedBookingsCount > 0
+              ? `${confirmedBookingsCount} ${confirmedBookingsCount === 1 ? "reserva" : "reservas"}`
+              : "Sin pedidos";
 
     return (
         <div className="mx-auto w-full max-w-(--container-max) px-(--spacing-margin-mobile) py-5 pb-28 md:px-(--spacing-margin-desktop) md:py-10 md:pb-16">
@@ -313,8 +555,10 @@ export function ProfilePage() {
                             <h1 className="m-0 truncate font-display text-2xl leading-tight font-bold text-primary lg:mt-5">
                                 ¡Hola, {displayName}!
                             </h1>
-                            <p className="m-0 mt-0.5 text-xs text-foreground-muted lg:hidden">
-                                Medellín, Antioquia
+                            <p className="m-0 mt-0.5 truncate text-xs text-foreground-muted lg:hidden">
+                                {defaultAddress
+                                    ? `${defaultAddress.neighborhood}, ${defaultAddress.city}`
+                                    : "Medellín, Antioquia"}
                             </p>
                             <p className="m-0 mt-1.5 hidden text-sm text-foreground-muted lg:block">
                                 Sabor de hogar, siempre contigo.
@@ -370,7 +614,7 @@ export function ProfilePage() {
 
                             <h2 className="m-0 mt-3 font-display text-xl font-bold text-white sm:text-2xl lg:mt-2 lg:text-3xl">
                                 <span className="lg:hidden">
-                                    Empanadas de la Abuela
+                                    {loyalty.rewardName}
                                 </span>
                                 <span className="hidden lg:inline">
                                     Tu Próxima Recompensa
@@ -381,13 +625,14 @@ export function ProfilePage() {
                                 Tus puntos acumulados de tradición y amor
                             </p>
                             <p className="m-0 mt-1 hidden text-sm text-white/80 lg:block">
-                                Empanadas de la Abuela (Faltan 3 pts)
+                                {loyalty.rewardName} (Faltan{" "}
+                                {loyalty.pointsRemaining} pts)
                             </p>
                         </div>
 
                         <div className="shrink-0 text-right lg:hidden">
                             <span className="block font-display text-2xl leading-none font-bold text-[#f5c58b]">
-                                420
+                                {loyalty.points}
                             </span>
                             <span className="mt-1 block text-[9px] font-bold tracking-[0.14em] text-white/70 uppercase">
                                 PUNTOS
@@ -403,7 +648,7 @@ export function ProfilePage() {
                             >
                                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                             </svg>
-                            12 pts
+                            {loyalty.points} pts
                         </span>
                     </div>
 
@@ -429,9 +674,9 @@ export function ProfilePage() {
                             <span>
                                 Te faltan{" "}
                                 <strong className="font-bold text-white">
-                                    80 pts
+                                    {loyalty.pointsRemaining} pts
                                 </strong>{" "}
-                                para un almuerzo gratis
+                                para tu próxima recompensa
                             </span>
                         </div>
                         <Link
@@ -446,16 +691,21 @@ export function ProfilePage() {
                         <div
                             role="progressbar"
                             aria-label="Progreso de fidelización"
-                            aria-valuenow={12}
+                            aria-valuenow={loyalty.pointsInCurrentCycle}
                             aria-valuemin={0}
-                            aria-valuemax={15}
+                            aria-valuemax={loyalty.nextRewardGoal}
                             className="h-2.5 w-full overflow-hidden rounded-full bg-[#31040b]"
                         >
-                            <div className="h-full w-4/5 rounded-full bg-[#f5c58b]" />
+                            <div
+                                className="h-full rounded-full bg-[#f5c58b] transition-all duration-500"
+                                style={{
+                                    width: `${Math.max(6, loyalty.progressPercent)}%`,
+                                }}
+                            />
                         </div>
                         <div className="mt-2 flex items-center justify-between text-xs font-semibold text-[#e8b98a]">
                             <span>0 pts</span>
-                            <span>15 pts</span>
+                            <span>{loyalty.nextRewardGoal} pts</span>
                         </div>
                     </div>
                 </div>
@@ -506,8 +756,8 @@ export function ProfilePage() {
                         <span className="mt-2.5 text-xs leading-tight font-bold text-foreground sm:mt-3 sm:text-sm sm:font-semibold">
                             Mis Direcciones
                         </span>
-                        <span className="mt-1 text-[10px] text-foreground-muted sm:hidden">
-                            2 guardadas
+                        <span className="mt-1 text-[10px] text-foreground-muted">
+                            {addressesSubtitle}
                         </span>
                     </button>
 
@@ -543,8 +793,8 @@ export function ProfilePage() {
                         <span className="mt-2.5 text-xs leading-tight font-bold text-foreground sm:mt-3 sm:text-sm sm:font-semibold">
                             Métodos de Pago
                         </span>
-                        <span className="mt-1 text-[10px] text-foreground-muted sm:hidden">
-                            Visa **** 4912
+                        <span className="mt-1 max-w-full truncate text-[10px] text-foreground-muted">
+                            {paymentSubtitle}
                         </span>
                     </button>
 
@@ -585,9 +835,7 @@ export function ProfilePage() {
                             </span>
                         </span>
                         <span className="mt-1 text-[10px] text-foreground-muted sm:text-[11px] sm:font-semibold sm:text-accent">
-                            {confirmedBookingsCount > 0
-                                ? `${confirmedBookingsCount} ${confirmedBookingsCount === 1 ? "reserva activa" : "reservas activas"}`
-                                : "14 órdenes"}
+                            {ordersSubtitle}
                         </span>
                     </button>
 
@@ -621,6 +869,9 @@ export function ProfilePage() {
                         <span className="mt-3 text-xs font-semibold text-foreground sm:text-sm">
                             Configuración
                         </span>
+                        <span className="mt-1 text-[10px] text-foreground-muted">
+                            Perfil y gustos
+                        </span>
                     </button>
                 </div>
 
@@ -630,13 +881,19 @@ export function ProfilePage() {
                         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-foreground-muted/15 pb-4">
                             <div>
                                 <h3 className="m-0 font-display text-xl font-bold text-primary">
-                                    Datos personales y cuenta
+                                    Datos personales y preferencias de dieta
                                 </h3>
                                 <p className="m-0 mt-1 text-xs text-foreground-muted sm:text-sm">
-                                    Correo registrado: {session.user.email}
+                                    Correo registrado: {user.email}
                                 </p>
                             </div>
                             <div className="flex flex-wrap items-center gap-2.5">
+                                <Link
+                                    href="/onboarding"
+                                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-accent px-4 py-2 text-xs font-semibold text-primary no-underline transition hover:bg-background-alt"
+                                >
+                                    Asistente de bienvenida
+                                </Link>
                                 <button
                                     type="button"
                                     onClick={() => void handleSignOut()}
@@ -779,6 +1036,116 @@ export function ProfilePage() {
                                 )}
                             </div>
 
+                            <div className="border-t border-foreground-muted/15 pt-4 sm:col-span-2">
+                                <h4 className="m-0 font-display text-lg font-bold text-primary">
+                                    Cuestionario de gustos: ¿Te gustan más las
+                                    vacas o los árboles?
+                                </h4>
+                                <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                                    {(
+                                        [
+                                            {
+                                                id: "cows",
+                                                title: "Las vacas",
+                                                desc: "Sazón tradicional y carnes.",
+                                            },
+                                            {
+                                                id: "trees",
+                                                title: "Los árboles",
+                                                desc: "Opciones veganas y vegetales.",
+                                            },
+                                            {
+                                                id: "both",
+                                                title: "Ambos mundos",
+                                                desc: "Equilibrio de toda la carta.",
+                                            },
+                                        ] as const
+                                    ).map((opt) => (
+                                        <button
+                                            key={opt.id}
+                                            type="button"
+                                            onClick={() =>
+                                                setDietOverride(opt.id)
+                                            }
+                                            className={`flex min-h-16 cursor-pointer flex-col justify-center rounded-xl border p-3 text-left transition ${
+                                                selectedDiet === opt.id
+                                                    ? "border-primary bg-primary/6 ring-1 ring-primary"
+                                                    : "border-foreground-muted/20 bg-background hover:border-primary/40"
+                                            }`}
+                                        >
+                                            <span className="text-xs font-bold text-primary">
+                                                {opt.title}
+                                            </span>
+                                            <span className="mt-0.5 text-[11px] text-foreground-muted">
+                                                {opt.desc}
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label
+                                    htmlFor="profile-spice"
+                                    className="block text-xs font-semibold text-foreground"
+                                >
+                                    Nivel de picante preferido
+                                </label>
+                                <select
+                                    id="profile-spice"
+                                    value={selectedSpice ?? ""}
+                                    onChange={(e) =>
+                                        setSpiceOverride(
+                                            (e.target.value ||
+                                                null) as SpiceTolerance | null,
+                                        )
+                                    }
+                                    className="mt-1.5 min-h-11 w-full rounded-lg border border-foreground-muted/30 bg-background px-3.5 py-2 text-sm text-foreground"
+                                >
+                                    <option value="">Sin preferencia</option>
+                                    <option value="none">
+                                        De lejitos (Cero picante)
+                                    </option>
+                                    <option value="mild">
+                                        Un guiño suave (Ají dulce)
+                                    </option>
+                                    <option value="spicy">
+                                        Sin miedo (Ají picante de la casa)
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label
+                                    htmlFor="profile-moment"
+                                    className="block text-xs font-semibold text-foreground"
+                                >
+                                    Momento favorito en la mesa
+                                </label>
+                                <select
+                                    id="profile-moment"
+                                    value={selectedMoment ?? ""}
+                                    onChange={(e) =>
+                                        setMomentOverride(
+                                            (e.target.value ||
+                                                null) as FavoriteMoment | null,
+                                        )
+                                    }
+                                    className="mt-1.5 min-h-11 w-full rounded-lg border border-foreground-muted/30 bg-background px-3.5 py-2 text-sm text-foreground"
+                                >
+                                    <option value="">Sin preferencia</option>
+                                    <option value="almuerzo">
+                                        Almuerzo casero (Plato fuerte)
+                                    </option>
+                                    <option value="tarde">
+                                        Media tarde (Entradas y empanadas)
+                                    </option>
+                                    <option value="postre">
+                                        Toque dulce (Postres artesanales)
+                                    </option>
+                                </select>
+                            </div>
+
                             {profileError && (
                                 <p
                                     role="alert"
@@ -812,6 +1179,261 @@ export function ProfilePage() {
                     </div>
                 )}
 
+                {activeSection === "addresses" && (
+                    <div className="mt-5 rounded-2xl border border-foreground-muted/15 bg-surface p-5 shadow-(--shadow-ambient-md) sm:mt-6 sm:p-8">
+                        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-foreground-muted/15 pb-4">
+                            <div>
+                                <h3 className="m-0 font-display text-xl font-bold text-primary">
+                                    Mis Direcciones Guardadas
+                                </h3>
+                                <p className="m-0 mt-1 text-xs text-foreground-muted sm:text-sm">
+                                    Agrega o administra tus direcciones de
+                                    entrega en el Valle de Aburrá.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setActiveSection(null)}
+                                className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full border border-foreground-muted/30 bg-transparent px-4 py-2 text-xs font-semibold text-foreground-muted transition hover:text-foreground"
+                            >
+                                Cerrar panel
+                            </button>
+                        </div>
+
+                        {addressError && (
+                            <p
+                                role="alert"
+                                className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-xs font-medium text-destructive"
+                            >
+                                {addressError}
+                            </p>
+                        )}
+
+                        {addresses.length === 0 ? (
+                            <p className="mt-4 rounded-xl border border-foreground-muted/15 bg-background p-4 text-xs text-foreground-muted">
+                                Aún no has guardado direcciones de entrega.
+                                Agrega una a continuación.
+                            </p>
+                        ) : (
+                            <ul className="m-0 mt-4 list-none divide-y divide-foreground-muted/15 p-0">
+                                {addresses.map((addr) => (
+                                    <li
+                                        key={addr.id}
+                                        className="flex flex-wrap items-center justify-between gap-3 py-3.5"
+                                    >
+                                        <div>
+                                            <p className="m-0 font-display text-base font-bold text-primary">
+                                                {addr.label}{" "}
+                                                {addr.isDefault && (
+                                                    <span className="ml-1.5 text-xs font-normal text-accent">
+                                                        (Principal)
+                                                    </span>
+                                                )}
+                                            </p>
+                                            <p className="m-0 mt-0.5 text-xs text-foreground">
+                                                {addr.addressLine} •{" "}
+                                                {addr.neighborhood}, {addr.city}
+                                            </p>
+                                            {addr.details && (
+                                                <p className="m-0 mt-0.5 text-xs text-foreground-muted">
+                                                    {addr.details}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                void handleRemoveAddress(
+                                                    addr.id,
+                                                )
+                                            }
+                                            className="inline-flex min-h-11 cursor-pointer items-center rounded-full border border-destructive/35 bg-transparent px-4 py-1.5 text-xs font-semibold text-destructive transition hover:bg-destructive/10"
+                                        >
+                                            Eliminar
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+
+                        <form
+                            onSubmit={handleAddAddress}
+                            className="mt-5 grid grid-cols-1 gap-3 border-t border-foreground-muted/15 pt-5 sm:grid-cols-4"
+                        >
+                            <input
+                                type="text"
+                                placeholder="Etiqueta (Casa, Oficina)"
+                                value={newAddressLabel}
+                                onChange={(e) =>
+                                    setNewAddressLabel(e.target.value)
+                                }
+                                className="min-h-11 rounded-lg border border-foreground-muted/30 bg-background px-3 py-2 text-xs text-foreground"
+                            />
+                            <input
+                                type="text"
+                                placeholder="Dirección (Calle 10 # 43A-30)"
+                                value={newAddressLine}
+                                onChange={(e) =>
+                                    setNewAddressLine(e.target.value)
+                                }
+                                className="min-h-11 rounded-lg border border-foreground-muted/30 bg-background px-3 py-2 text-xs text-foreground"
+                            />
+                            <input
+                                type="text"
+                                placeholder="Barrio (El Poblado)"
+                                value={newNeighborhood}
+                                onChange={(e) =>
+                                    setNewNeighborhood(e.target.value)
+                                }
+                                className="min-h-11 rounded-lg border border-foreground-muted/30 bg-background px-3 py-2 text-xs text-foreground"
+                            />
+                            <button
+                                type="submit"
+                                disabled={isSavingAddress}
+                                className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+                            >
+                                {isSavingAddress
+                                    ? "Guardando..."
+                                    : "Agregar dirección"}
+                            </button>
+                        </form>
+                    </div>
+                )}
+
+                {activeSection === "payments" && (
+                    <div className="mt-5 rounded-2xl border border-foreground-muted/15 bg-surface p-5 shadow-(--shadow-ambient-md) sm:mt-6 sm:p-8">
+                        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-foreground-muted/15 pb-4">
+                            <div>
+                                <h3 className="m-0 font-display text-xl font-bold text-primary">
+                                    Métodos de Pago
+                                </h3>
+                                <p className="m-0 mt-1 text-xs text-foreground-muted sm:text-sm">
+                                    Administra tus medios de pago para ordenar y
+                                    sumar puntos rápidamente.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setActiveSection(null)}
+                                className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full border border-foreground-muted/30 bg-transparent px-4 py-2 text-xs font-semibold text-foreground-muted transition hover:text-foreground"
+                            >
+                                Cerrar panel
+                            </button>
+                        </div>
+
+                        {paymentError && (
+                            <p
+                                role="alert"
+                                className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-xs font-medium text-destructive"
+                            >
+                                {paymentError}
+                            </p>
+                        )}
+
+                        {paymentMethods.length === 0 ? (
+                            <p className="mt-4 rounded-xl border border-foreground-muted/15 bg-background p-4 text-xs text-foreground-muted">
+                                Aún no has registrado métodos de pago. Agrega
+                                uno a continuación.
+                            </p>
+                        ) : (
+                            <ul className="m-0 mt-4 list-none divide-y divide-foreground-muted/15 p-0">
+                                {paymentMethods.map((pm) => (
+                                    <li
+                                        key={pm.id}
+                                        className="flex flex-wrap items-center justify-between gap-3 py-3.5"
+                                    >
+                                        <div>
+                                            <p className="m-0 font-display text-base font-bold text-primary">
+                                                {pm.brand}{" "}
+                                                {pm.lastFour
+                                                    ? `**** ${pm.lastFour}`
+                                                    : ""}
+                                                {pm.isDefault && (
+                                                    <span className="ml-1.5 text-xs font-normal text-accent">
+                                                        (Principal)
+                                                    </span>
+                                                )}
+                                            </p>
+                                            <p className="m-0 mt-0.5 text-xs text-foreground-muted">
+                                                Tipo:{" "}
+                                                {pm.type === "card"
+                                                    ? "Tarjeta"
+                                                    : pm.type === "pse"
+                                                      ? "PSE / Transferencia"
+                                                      : "Contra entrega"}
+                                            </p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                void handleRemovePayment(pm.id)
+                                            }
+                                            className="inline-flex min-h-11 cursor-pointer items-center rounded-full border border-destructive/35 bg-transparent px-4 py-1.5 text-xs font-semibold text-destructive transition hover:bg-destructive/10"
+                                        >
+                                            Eliminar
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+
+                        <form
+                            onSubmit={handleAddPayment}
+                            className="mt-5 grid grid-cols-1 gap-3 border-t border-foreground-muted/15 pt-5 sm:grid-cols-4"
+                        >
+                            <select
+                                value={newPaymentType}
+                                onChange={(e) =>
+                                    setNewPaymentType(
+                                        e.target.value as PaymentMethodType,
+                                    )
+                                }
+                                className="min-h-11 rounded-lg border border-foreground-muted/30 bg-background px-3 py-2 text-xs text-foreground"
+                            >
+                                <option value="card">Tarjeta</option>
+                                <option value="pse">PSE / Nequi</option>
+                                <option value="cash">Contra entrega</option>
+                            </select>
+
+                            <input
+                                type="text"
+                                placeholder="Franquicia o Banco (Visa, PSE)"
+                                value={newPaymentBrand}
+                                onChange={(e) =>
+                                    setNewPaymentBrand(e.target.value)
+                                }
+                                disabled={newPaymentType === "cash"}
+                                className="min-h-11 rounded-lg border border-foreground-muted/30 bg-background px-3 py-2 text-xs text-foreground disabled:opacity-50"
+                            />
+
+                            <input
+                                type="text"
+                                inputMode="numeric"
+                                maxLength={4}
+                                placeholder="Últimos 4 dígitos (4912)"
+                                value={newPaymentLastFour}
+                                onChange={(e) =>
+                                    setNewPaymentLastFour(
+                                        e.target.value.replace(/\D/g, ""),
+                                    )
+                                }
+                                disabled={newPaymentType !== "card"}
+                                className="min-h-11 rounded-lg border border-foreground-muted/30 bg-background px-3 py-2 text-xs text-foreground disabled:opacity-50"
+                            />
+
+                            <button
+                                type="submit"
+                                disabled={isSavingPayment}
+                                className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+                            >
+                                {isSavingPayment
+                                    ? "Guardando..."
+                                    : "Agregar medio"}
+                            </button>
+                        </form>
+                    </div>
+                )}
+
                 {activeSection === "orders" && (
                     <div className="mt-5 rounded-2xl border border-foreground-muted/15 bg-surface p-5 shadow-(--shadow-ambient-md) sm:mt-6 sm:p-8">
                         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-foreground-muted/15 pb-4">
@@ -820,14 +1442,20 @@ export function ProfilePage() {
                                     Historial de Pedidos y Reservas
                                 </h3>
                                 <p className="m-0 mt-1 text-xs text-foreground-muted sm:text-sm">
-                                    Consulta y administra tus reservas de mesa
-                                    en Casa Flora.
+                                    Tus compras que suman puntos y tus reservas
+                                    de mesa en Casa Flora.
                                 </p>
                             </div>
                             <div className="flex flex-wrap items-center gap-2.5">
                                 <Link
-                                    href="/booking"
+                                    href="/menu"
                                     className="inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground no-underline transition hover:opacity-90"
+                                >
+                                    Pedir en el menú
+                                </Link>
+                                <Link
+                                    href="/booking"
+                                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-accent px-5 py-2 text-xs font-semibold text-primary no-underline transition hover:bg-background-alt"
                                 >
                                     Nueva reserva
                                 </Link>
@@ -841,299 +1469,245 @@ export function ProfilePage() {
                             </div>
                         </div>
 
-                        {bookingsError && (
-                            <div
-                                role="alert"
-                                className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-xs font-medium text-destructive"
-                            >
-                                <span>{bookingsError}</span>
-                                <button
-                                    type="button"
-                                    onClick={() => void loadBookings()}
-                                    className="inline-flex min-h-11 cursor-pointer items-center rounded-full border border-destructive/40 bg-transparent px-4 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10"
-                                >
-                                    Reintentar
-                                </button>
-                            </div>
-                        )}
-
-                        {isLoadingBookings ? (
-                            <div
-                                role="status"
-                                aria-live="polite"
-                                className="mt-6 rounded-xl border border-foreground-muted/15 bg-background p-6 text-center text-sm text-foreground-muted"
-                            >
-                                Consultando tus reservas registradas...
-                            </div>
-                        ) : bookings.length === 0 ? (
-                            <div className="mt-6 rounded-xl border border-foreground-muted/15 bg-background p-6 text-center">
-                                <p className="m-0 text-sm text-foreground-muted">
-                                    Aún no tienes reservas registradas en tu
-                                    cuenta.
+                        <div className="mt-5">
+                            <h4 className="m-0 font-display text-base font-bold text-primary">
+                                Pedidos realizados ({orders.length})
+                            </h4>
+                            {orders.length === 0 ? (
+                                <p className="mt-2 rounded-xl border border-foreground-muted/15 bg-background p-4 text-xs text-foreground-muted">
+                                    Aún no has realizado pedidos. Compra tu
+                                    primer plato para ganar puntos en el Club
+                                    Casa Flora.
                                 </p>
-                                <Link
-                                    href="/booking"
-                                    className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full border border-accent px-5 py-2 text-xs font-semibold text-primary no-underline transition hover:bg-background-alt"
-                                >
-                                    Reservar una mesa
-                                </Link>
-                            </div>
-                        ) : (
-                            <ul className="m-0 mt-5 list-none divide-y divide-foreground-muted/15 p-0">
-                                {bookings.map((booking) => {
-                                    const isConfirmed =
-                                        booking.status === "confirmed";
-                                    return (
+                            ) : (
+                                <ul className="m-0 mt-3 list-none divide-y divide-foreground-muted/15 p-0">
+                                    {orders.map((order) => (
                                         <li
-                                            key={booking.id}
-                                            className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+                                            key={order.id}
+                                            className="flex flex-wrap items-center justify-between gap-3 py-3"
                                         >
                                             <div>
-                                                <p className="m-0 font-display text-lg font-bold text-primary">
-                                                    {formatEnvironmentLabel(
-                                                        booking.environment,
-                                                    )}
+                                                <p className="m-0 font-display text-base font-bold text-primary">
+                                                    Orden #{order.orderNumber} •{" "}
+                                                    {order.items
+                                                        .map(
+                                                            (i) =>
+                                                                `${i.quantity}x ${i.productName}`,
+                                                        )
+                                                        .join(", ")}
                                                 </p>
-                                                <p className="m-0 mt-0.5 text-sm text-foreground">
-                                                    Fecha: {booking.date} a las{" "}
-                                                    {booking.time} (
-                                                    {booking.diners}{" "}
-                                                    {booking.diners === 1
-                                                        ? "persona"
-                                                        : "personas"}
-                                                    )
-                                                </p>
-                                                <p className="m-0 mt-1 text-xs font-semibold text-foreground-muted">
-                                                    Estado:{" "}
-                                                    {isConfirmed
-                                                        ? "Confirmada"
-                                                        : "Cancelada"}
+                                                <p className="m-0 mt-0.5 text-xs text-foreground-muted">
+                                                    {order.addressLabel} •{" "}
+                                                    {order.paymentSummary}
                                                 </p>
                                             </div>
-
-                                            {isConfirmed && (
-                                                <button
-                                                    type="button"
-                                                    disabled={
-                                                        cancellingId ===
-                                                        booking.id
-                                                    }
-                                                    onClick={() =>
-                                                        void handleCancelBooking(
-                                                            booking.id,
-                                                        )
-                                                    }
-                                                    className="inline-flex min-h-11 cursor-pointer items-center justify-center self-start rounded-full border border-destructive/40 bg-transparent px-5 py-2 text-xs font-semibold text-destructive transition hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-60 sm:self-center"
-                                                >
-                                                    {cancellingId === booking.id
-                                                        ? "Cancelando..."
-                                                        : "Cancelar reserva"}
-                                                </button>
-                                            )}
+                                            <div className="text-right">
+                                                <span className="block text-sm font-bold text-foreground">
+                                                    {formatPrice(
+                                                        order.totalAmount,
+                                                    )}
+                                                </span>
+                                                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                                                    +{order.pointsEarned} pts
+                                                </span>
+                                            </div>
                                         </li>
-                                    );
-                                })}
-                            </ul>
-                        )}
-                    </div>
-                )}
-
-                {activeSection === "addresses" && (
-                    <div className="mt-5 rounded-2xl border border-foreground-muted/15 bg-surface p-5 shadow-(--shadow-ambient-md) sm:mt-6 sm:p-8">
-                        <div className="flex flex-wrap items-center justify-between gap-4">
-                            <div>
-                                <h3 className="m-0 font-display text-xl font-bold text-primary">
-                                    Mis Direcciones
-                                </h3>
-                                <p className="m-0 mt-1 text-sm text-foreground-muted">
-                                    Dirección Casa • El Poblado y sede principal
-                                    Casa Flora Medellín habilitadas para entrega
-                                    y recogida.
-                                </p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setActiveSection(null)}
-                                className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full border border-foreground-muted/30 bg-transparent px-4 py-2 text-xs font-semibold text-foreground-muted transition hover:text-foreground"
-                            >
-                                Cerrar panel
-                            </button>
+                                    ))}
+                                </ul>
+                            )}
                         </div>
-                    </div>
-                )}
 
-                {activeSection === "payments" && (
-                    <div className="mt-5 rounded-2xl border border-foreground-muted/15 bg-surface p-5 shadow-(--shadow-ambient-md) sm:mt-6 sm:p-8">
-                        <div className="flex flex-wrap items-center justify-between gap-4">
-                            <div>
-                                <h3 className="m-0 font-display text-xl font-bold text-primary">
-                                    Métodos de Pago
-                                </h3>
-                                <p className="m-0 mt-1 text-sm text-foreground-muted">
-                                    Tarjeta principal Visa **** 4912,
-                                    transferencia PSE y pago contra entrega
-                                    activos.
+                        <div className="mt-6 border-t border-foreground-muted/15 pt-5">
+                            <h4 className="m-0 font-display text-base font-bold text-primary">
+                                Reservas de mesa ({bookings.length})
+                            </h4>
+
+                            {bookingsError && (
+                                <div
+                                    role="alert"
+                                    className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-xs font-medium text-destructive"
+                                >
+                                    <span>{bookingsError}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => void loadBookings()}
+                                        className="inline-flex min-h-11 cursor-pointer items-center rounded-full border border-destructive/40 bg-transparent px-4 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10"
+                                    >
+                                        Reintentar
+                                    </button>
+                                </div>
+                            )}
+
+                            {isLoadingBookings ? (
+                                <div
+                                    role="status"
+                                    aria-live="polite"
+                                    className="mt-3 rounded-xl border border-foreground-muted/15 bg-background p-4 text-center text-xs text-foreground-muted"
+                                >
+                                    Consultando tus reservas registradas...
+                                </div>
+                            ) : bookings.length === 0 ? (
+                                <p className="mt-2 rounded-xl border border-foreground-muted/15 bg-background p-4 text-xs text-foreground-muted">
+                                    Aún no tienes reservas de mesa registradas.
                                 </p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setActiveSection(null)}
-                                className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full border border-foreground-muted/30 bg-transparent px-4 py-2 text-xs font-semibold text-foreground-muted transition hover:text-foreground"
-                            >
-                                Cerrar panel
-                            </button>
+                            ) : (
+                                <ul className="m-0 mt-3 list-none divide-y divide-foreground-muted/15 p-0">
+                                    {bookings.map((booking) => {
+                                        const isConfirmed =
+                                            booking.status === "confirmed";
+                                        return (
+                                            <li
+                                                key={booking.id}
+                                                className="flex flex-col gap-3 py-3.5 sm:flex-row sm:items-center sm:justify-between"
+                                            >
+                                                <div>
+                                                    <p className="m-0 font-display text-base font-bold text-primary">
+                                                        {formatEnvironmentLabel(
+                                                            booking.environment,
+                                                        )}
+                                                    </p>
+                                                    <p className="m-0 mt-0.5 text-xs text-foreground">
+                                                        Fecha: {booking.date} a
+                                                        las {booking.time} (
+                                                        {booking.diners}{" "}
+                                                        {booking.diners === 1
+                                                            ? "persona"
+                                                            : "personas"}
+                                                        )
+                                                    </p>
+                                                    <p className="m-0 mt-0.5 text-xs font-semibold text-foreground-muted">
+                                                        Estado:{" "}
+                                                        {isConfirmed
+                                                            ? "Confirmada"
+                                                            : "Cancelada"}
+                                                    </p>
+                                                </div>
+
+                                                {isConfirmed && (
+                                                    <button
+                                                        type="button"
+                                                        disabled={
+                                                            cancellingId ===
+                                                            booking.id
+                                                        }
+                                                        onClick={() =>
+                                                            void handleCancelBooking(
+                                                                booking.id,
+                                                            )
+                                                        }
+                                                        className="inline-flex min-h-11 cursor-pointer items-center justify-center self-start rounded-full border border-destructive/40 bg-transparent px-5 py-2 text-xs font-semibold text-destructive transition hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-60 sm:self-center"
+                                                    >
+                                                        {cancellingId ===
+                                                        booking.id
+                                                            ? "Cancelando..."
+                                                            : "Cancelar reserva"}
+                                                    </button>
+                                                )}
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            )}
                         </div>
                     </div>
                 )}
             </section>
 
-            <section
-                aria-labelledby="profile-favorites-heading"
-                className="mt-7 sm:mt-10"
-            >
-                <div className="mb-3.5 flex items-end justify-between gap-2 sm:mb-5">
-                    <div className="sm:border-b-2 sm:border-[#e5c5b5] sm:pb-1.5">
-                        <h2
-                            id="profile-favorites-heading"
-                            className="m-0 font-display text-xl font-bold text-primary sm:text-2xl"
-                        >
-                            Tus favoritos de siempre
-                        </h2>
-                        <p className="m-0 mt-0.5 text-xs text-foreground-muted md:hidden">
-                            Último pedido realizado hace 4 días
-                        </p>
-                    </div>
-                    <span className="text-xs font-bold text-[#bc8e56] md:hidden">
-                        Entregado
-                    </span>
-                </div>
-
-                <article className="rounded-2xl border border-foreground-muted/10 bg-surface p-4 shadow-(--shadow-ambient-md) md:hidden">
-                    <div className="flex items-center gap-3.5">
-                        <div className="relative size-20 shrink-0 overflow-hidden rounded-xl">
-                            <Image
-                                src={FAVORITE_COMBO_IMAGE}
-                                alt="Combo Familiar Tradición"
-                                fill
-                                sizes="80px"
-                                className="object-cover"
-                            />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                            <h3 className="m-0 truncate font-display text-base font-bold text-primary">
-                                Combo Familiar Tradición
-                            </h3>
-                            <p className="m-0 mt-0.5 truncate text-xs text-foreground-muted">
-                                12 empanadas de carne desmechada, ají y
-                                guacamole artesanal.
+            {featuredDish && (
+                <section
+                    aria-labelledby="profile-favorites-heading"
+                    className="mt-7 sm:mt-10"
+                >
+                    <div className="mb-3.5 flex items-end justify-between gap-2 sm:mb-5">
+                        <div className="sm:border-b-2 sm:border-[#e5c5b5] sm:pb-1.5">
+                            <h2
+                                id="profile-favorites-heading"
+                                className="m-0 font-display text-xl font-bold text-primary sm:text-2xl"
+                            >
+                                Tus favoritos de siempre
+                            </h2>
+                            <p className="m-0 mt-0.5 text-xs text-foreground-muted md:hidden">
+                                {featuredDish.subtitle}
                             </p>
-                            <div className="mt-2 flex items-center justify-between gap-2">
-                                <span className="text-sm font-extrabold text-foreground">
-                                    $ 45.000 COP
-                                </span>
-                                <span className="text-xs text-foreground-muted">
-                                    Orden #2084
-                                </span>
-                            </div>
                         </div>
-                    </div>
-
-                    <div className="my-3.5 border-t border-foreground-muted/12" />
-
-                    <div className="flex items-center justify-between gap-3">
-                        <div className="flex min-w-0 items-center gap-2 text-xs text-foreground-muted">
-                            <svg
-                                aria-hidden="true"
-                                viewBox="0 0 20 20"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="1.8"
-                                className="size-4 shrink-0 text-emerald-600"
-                            >
-                                <circle cx="10" cy="10" r="7.5" />
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M7 10.2l2 2 4-4"
-                                />
-                            </svg>
-                            <span className="truncate">
-                                Dirección Casa • El Poblado
-                            </span>
-                        </div>
-
-                        <button
-                            type="button"
-                            onClick={handleRepeatOrder}
-                            className="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full bg-[#4b151b] px-5 py-2.5 text-xs font-bold text-white shadow-xs transition hover:opacity-95"
-                        >
-                            <svg
-                                aria-hidden="true"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                className="size-4"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M4 4v5h5M20 12a8 8 0 11-2.34-5.66L4 9"
-                                />
-                            </svg>
-                            {repeatOrderFeedback
-                                ? "Redirigiendo..."
-                                : "Repetir Pedido"}
-                        </button>
-                    </div>
-                </article>
-
-                <article className="hidden overflow-hidden rounded-2xl border border-foreground-muted/10 bg-surface shadow-(--shadow-ambient-md) md:grid md:grid-cols-12">
-                    <div className="relative min-h-60 md:col-span-5">
-                        <Image
-                            src={FAVORITE_COMBO_IMAGE}
-                            alt="Combo Familiar Tradición con empanadas, ají y guacamole"
-                            fill
-                            sizes="42vw"
-                            className="object-cover"
-                        />
-                        <span className="absolute top-4 left-4 rounded-full bg-[#e8cfc8]/90 px-3.5 py-1 text-[10px] font-bold tracking-wider text-[#554242] uppercase backdrop-blur-xs">
-                            RECOGIDA EN LOCAL
+                        <span className="text-xs font-bold text-[#bc8e56] md:hidden">
+                            {featuredDish.statusLabel}
                         </span>
                     </div>
 
-                    <div className="flex flex-col justify-between p-6 sm:p-8 md:col-span-7">
-                        <div>
-                            <div className="flex flex-wrap items-baseline justify-between gap-2">
-                                <h3 className="m-0 font-display text-2xl font-bold text-primary sm:text-[1.75rem]">
-                                    Combo Familiar Tradición
+                    {orderBanner && (
+                        <div
+                            role="status"
+                            className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs font-semibold text-emerald-800 dark:text-emerald-300"
+                        >
+                            {orderBanner}
+                        </div>
+                    )}
+
+                    <article className="rounded-2xl border border-foreground-muted/10 bg-surface p-4 shadow-(--shadow-ambient-md) md:hidden">
+                        <div className="flex items-center gap-3.5">
+                            <div className="relative size-20 shrink-0 overflow-hidden rounded-xl">
+                                <Image
+                                    src={featuredDish.imageUrl}
+                                    alt={featuredDish.name}
+                                    fill
+                                    sizes="80px"
+                                    className="object-cover"
+                                />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <h3 className="m-0 truncate font-display text-base font-bold text-primary">
+                                    {featuredDish.name}
                                 </h3>
-                                <span className="font-display text-lg font-semibold text-secondary">
-                                    $45.000
+                                <p className="m-0 mt-0.5 truncate text-xs text-foreground-muted">
+                                    {featuredDish.description}
+                                </p>
+                                <div className="mt-2 flex items-center justify-between gap-2">
+                                    <span className="text-sm font-extrabold text-foreground">
+                                        {formatPrice(featuredDish.price)} COP
+                                    </span>
+                                    <span className="text-xs text-foreground-muted">
+                                        {featuredDish.orderNumber
+                                            ? `Orden #${featuredDish.orderNumber}`
+                                            : "Sugerencia del chef"}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="my-3.5 border-t border-foreground-muted/12" />
+
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex min-w-0 items-center gap-2 text-xs text-foreground-muted">
+                                <svg
+                                    aria-hidden="true"
+                                    viewBox="0 0 20 20"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.8"
+                                    className="size-4 shrink-0 text-emerald-600"
+                                >
+                                    <circle cx="10" cy="10" r="7.5" />
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M7 10.2l2 2 4-4"
+                                    />
+                                </svg>
+                                <span className="truncate">
+                                    {featuredDish.addressLabel}
                                 </span>
                             </div>
 
-                            <p className="m-0 mt-3 text-sm/6 text-foreground-muted">
-                                12 empanadas de carne desmechada crujientes,
-                                acompañadas de 2 salsas de la casa y 1 porción
-                                generosa de guacamole artesanal. El sabor
-                                perfecto para compartir en familia.
-                            </p>
-                        </div>
-
-                        <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
-                            {repeatOrderFeedback && (
-                                <span
-                                    role="status"
-                                    className="text-xs font-semibold text-primary"
-                                >
-                                    Redirigiendo al menú...
-                                </span>
-                            )}
                             <button
                                 type="button"
-                                onClick={handleRepeatOrder}
-                                className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full bg-[#a87c4f] px-6 py-2.5 text-xs font-bold text-white shadow-xs transition hover:bg-[#936a41]"
+                                disabled={isPlacingOrder}
+                                onClick={() =>
+                                    void handleBuyFeaturedProduct(
+                                        featuredDish.productId,
+                                    )
+                                }
+                                className="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full bg-[#4b151b] px-5 py-2.5 text-xs font-bold text-white shadow-xs transition hover:opacity-95 disabled:opacity-50"
                             >
                                 <svg
                                     aria-hidden="true"
@@ -1149,12 +1723,82 @@ export function ProfilePage() {
                                         d="M4 4v5h5M20 12a8 8 0 11-2.34-5.66L4 9"
                                     />
                                 </svg>
-                                Repetir Pedido
+                                {isPlacingOrder
+                                    ? "Procesando..."
+                                    : featuredDish.ctaLabel}
                             </button>
                         </div>
-                    </div>
-                </article>
-            </section>
+                    </article>
+
+                    <article className="hidden overflow-hidden rounded-2xl border border-foreground-muted/10 bg-surface shadow-(--shadow-ambient-md) md:grid md:grid-cols-12">
+                        <div className="relative min-h-60 md:col-span-5">
+                            <Image
+                                src={featuredDish.imageUrl}
+                                alt={featuredDish.name}
+                                fill
+                                sizes="42vw"
+                                className="object-cover"
+                            />
+                            <span className="absolute top-4 left-4 rounded-full bg-[#e8cfc8]/90 px-3.5 py-1 text-[10px] font-bold tracking-wider text-[#554242] uppercase backdrop-blur-xs">
+                                {featuredDish.badgeLabel}
+                            </span>
+                        </div>
+
+                        <div className="flex flex-col justify-between p-6 sm:p-8 md:col-span-7">
+                            <div>
+                                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                                    <h3 className="m-0 font-display text-2xl font-bold text-primary sm:text-[1.75rem]">
+                                        {featuredDish.name}
+                                    </h3>
+                                    <span className="font-display text-lg font-semibold text-secondary">
+                                        {formatPrice(featuredDish.price)}
+                                    </span>
+                                </div>
+
+                                <p className="m-0 mt-1 text-xs font-semibold text-accent">
+                                    {featuredDish.subtitle} •{" "}
+                                    {featuredDish.addressLabel}
+                                </p>
+
+                                <p className="m-0 mt-3 text-sm/6 text-foreground-muted">
+                                    {featuredDish.description}
+                                </p>
+                            </div>
+
+                            <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
+                                <button
+                                    type="button"
+                                    disabled={isPlacingOrder}
+                                    onClick={() =>
+                                        void handleBuyFeaturedProduct(
+                                            featuredDish.productId,
+                                        )
+                                    }
+                                    className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full bg-[#a87c4f] px-6 py-2.5 text-xs font-bold text-white shadow-xs transition hover:bg-[#936a41] disabled:opacity-50"
+                                >
+                                    <svg
+                                        aria-hidden="true"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        className="size-4"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M4 4v5h5M20 12a8 8 0 11-2.34-5.66L4 9"
+                                        />
+                                    </svg>
+                                    {isPlacingOrder
+                                        ? "Procesando..."
+                                        : featuredDish.ctaLabel}
+                                </button>
+                            </div>
+                        </div>
+                    </article>
+                </section>
+            )}
 
             <aside
                 aria-label="Filosofía de Casa Flora"
