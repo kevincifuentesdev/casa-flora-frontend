@@ -10,6 +10,7 @@ import {
     type ReactNode,
 } from "react";
 
+import { useSession } from "@/features/auth/hooks/useSession";
 import { DEFAULT_DINERS, MAX_DINERS, MIN_DINERS } from "../domain/constants";
 import type {
     BookingDraft,
@@ -46,6 +47,7 @@ type BookingFormContextValue = {
 const BookingFormContext = createContext<BookingFormContextValue | null>(null);
 
 export function BookingFormProvider({ children }: { children: ReactNode }) {
+    const { session } = useSession();
     const [draft, setDraft] = useState<BookingDraft>({
         environment: "interior",
         date: null,
@@ -157,9 +159,19 @@ export function BookingFormProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const submit = useCallback(async () => {
-        setIsSubmitting(true);
         setSubmitError(null);
         setRequiresAuth(false);
+
+        if (!session?.user) {
+            setRequiresAuth(true);
+            setSubmitError(
+                "Debes iniciar sesión en tu cuenta para reservar una mesa.",
+            );
+            setErrorVersion((v) => v + 1);
+            return;
+        }
+
+        setIsSubmitting(true);
         try {
             const result = await submitBooking(draft);
             if (result.ok) {
@@ -169,14 +181,18 @@ export function BookingFormProvider({ children }: { children: ReactNode }) {
                 setErrors(result.errors);
                 setSubmitError(result.serverError ?? null);
                 setRequiresAuth(Boolean(result.requiresAuth));
-                if (Object.keys(result.errors).length > 0) {
+                if (
+                    Object.keys(result.errors).length > 0 ||
+                    result.serverError ||
+                    result.requiresAuth
+                ) {
                     setErrorVersion((v) => v + 1);
                 }
             }
         } finally {
             setIsSubmitting(false);
         }
-    }, [draft]);
+    }, [draft, session?.user]);
 
     const resetBookingForm = useCallback(() => {
         setConfirmedBooking(null);
