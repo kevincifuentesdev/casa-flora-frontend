@@ -32,6 +32,10 @@ export default function Navbar() {
         document.documentElement.classList.toggle("dark", nextTheme);
     }
 
+    if (pathname === "/onboarding") {
+        return null;
+    }
+
     return (
         <header className="fixed top-0 z-50 w-full bg-[#f8f4ecf2] shadow-(--shadow-ambient-sm) backdrop-blur-md dark:bg-[#2c1e1af2]">
             <nav className="mx-auto flex h-16 max-w-(--container-max) items-center justify-between px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop)">

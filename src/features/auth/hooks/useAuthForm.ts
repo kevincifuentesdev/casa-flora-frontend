@@ -41,7 +41,7 @@ export function useAuthForm() {
         const success =
             mode === "login" ? await submitLogin() : await submitSignUp();
         if (success) {
-            router.push("/");
+            router.push(mode === "signup" ? "/onboarding" : "/");
         }
     }, [mode, router, submitLogin, submitSignUp]);
 
