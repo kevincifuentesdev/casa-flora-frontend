@@ -2461,14 +2461,18 @@ export default function AdminDashboardPage() {
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="order-detail-title"
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-xs"
+                    className="fixed inset-0 z-60 flex items-end justify-center bg-black/55 p-0 backdrop-blur-xs sm:items-center sm:p-4"
                     onClick={(e) => {
                         if (e.target === e.currentTarget) {
                             setSelectedOrder(null);
                         }
                     }}
                 >
-                    <div className="custom-scrollbar max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-foreground-muted/20 bg-surface p-6 shadow-(--shadow-ambient-md)">
+                    <div className="custom-scrollbar max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl border border-foreground-muted/20 bg-surface p-5 pb-7 shadow-(--shadow-ambient-md) sm:max-h-[88dvh] sm:max-w-2xl sm:rounded-2xl sm:p-6">
+                        <div
+                            className="mx-auto mb-3 h-1.5 w-12 shrink-0 rounded-full bg-foreground-muted/25 sm:hidden"
+                            aria-hidden="true"
+                        />
                         <div className="flex items-start justify-between gap-4 border-b border-foreground-muted/15 pb-4">
                             <div>
                                 <p className="m-0 text-xs font-bold tracking-wider text-accent uppercase">
@@ -2698,7 +2702,7 @@ export default function AdminDashboardPage() {
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="booking-detail-title"
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-xs"
+                    className="fixed inset-0 z-60 flex items-end justify-center bg-black/55 p-0 backdrop-blur-xs sm:items-center sm:p-4"
                     onClick={(e) => {
                         if (e.target === e.currentTarget) {
                             setSelectedBooking(null);
@@ -2706,7 +2710,11 @@ export default function AdminDashboardPage() {
                         }
                     }}
                 >
-                    <div className="custom-scrollbar max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-foreground-muted/20 bg-surface p-6 shadow-(--shadow-ambient-md)">
+                    <div className="custom-scrollbar max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl border border-foreground-muted/20 bg-surface p-5 pb-7 shadow-(--shadow-ambient-md) sm:max-h-[88dvh] sm:max-w-2xl sm:rounded-2xl sm:p-6">
+                        <div
+                            className="mx-auto mb-3 h-1.5 w-12 shrink-0 rounded-full bg-foreground-muted/25 sm:hidden"
+                            aria-hidden="true"
+                        />
                         <div className="flex items-start justify-between gap-4 border-b border-foreground-muted/15 pb-4">
                             <div>
                                 <p className="m-0 text-xs font-bold tracking-wider text-accent uppercase">
@@ -3060,14 +3068,18 @@ export default function AdminDashboardPage() {
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="product-modal-title"
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-xs"
+                    className="fixed inset-0 z-60 flex items-end justify-center bg-black/55 p-0 backdrop-blur-xs sm:items-center sm:p-4"
                     onClick={(e) => {
                         if (e.target === e.currentTarget) {
                             setIsProductModalOpen(false);
                         }
                     }}
                 >
-                    <div className="custom-scrollbar max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-foreground-muted/20 bg-surface p-6 shadow-(--shadow-ambient-md)">
+                    <div className="custom-scrollbar max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl border border-foreground-muted/20 bg-surface p-5 pb-7 shadow-(--shadow-ambient-md) sm:max-h-[88dvh] sm:max-w-2xl sm:rounded-2xl sm:p-6">
+                        <div
+                            className="mx-auto mb-3 h-1.5 w-12 shrink-0 rounded-full bg-foreground-muted/25 sm:hidden"
+                            aria-hidden="true"
+                        />
                         <div className="flex items-start justify-between gap-4 border-b border-foreground-muted/15 pb-4">
                             <div>
                                 <p className="m-0 text-xs font-bold tracking-wider text-accent uppercase">
@@ -3363,14 +3375,18 @@ export default function AdminDashboardPage() {
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="delete-product-title"
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-xs"
+                    className="fixed inset-0 z-60 flex items-end justify-center bg-black/55 p-0 backdrop-blur-xs sm:items-center sm:p-4"
                     onClick={(e) => {
                         if (e.target === e.currentTarget) {
                             setProductToDelete(null);
                         }
                     }}
                 >
-                    <div className="w-full max-w-md rounded-2xl border border-destructive/30 bg-surface p-6 shadow-(--shadow-ambient-md)">
+                    <div className="w-full rounded-t-3xl border border-destructive/30 bg-surface p-6 pb-8 shadow-(--shadow-ambient-md) sm:max-w-md sm:rounded-2xl sm:pb-6">
+                        <div
+                            className="mx-auto mb-3 h-1.5 w-12 shrink-0 rounded-full bg-foreground-muted/25 sm:hidden"
+                            aria-hidden="true"
+                        />
                         <h2
                             id="delete-product-title"
                             className="m-0 font-display text-xl font-bold text-primary"
