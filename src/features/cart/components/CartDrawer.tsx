@@ -173,7 +173,12 @@ export default function CartDrawer() {
         }
 
         clearCart();
-        window.location.assign(result.session.checkoutUrl);
+        const targetUrl =
+            process.env.NODE_ENV === "production"
+                ? result.session.checkoutUrl
+                : (result.session.sandboxCheckoutUrl ||
+                  result.session.checkoutUrl);
+        window.location.assign(targetUrl);
     };
 
     return (
