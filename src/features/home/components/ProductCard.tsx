@@ -1,40 +1,19 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { CartLarge5 } from "reicon-react";
 
-import { useSession } from "@/features/auth/hooks/useSession";
-import { createCustomerOrder } from "@/features/auth/services/authService";
+import { useCart } from "@/features/cart/hooks/useCart";
 import Button from "@/features/common/components/Button";
 import type { Product } from "@/features/products/domain/product";
 import { formatPrice } from "@/features/products/domain/product";
 
+const focusRing =
+    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary";
+
 export default function ProductCard({ product }: { product: Product }) {
-    const router = useRouter();
-    const { isAuthenticated } = useSession();
-    const [isOrdering, setIsOrdering] = useState(false);
-    const [pointsNotice, setPointsNotice] = useState<number | null>(null);
-
-    const handleBuyNow = async () => {
-        if (!isAuthenticated) {
-            router.push("/login");
-            return;
-        }
-        if (isOrdering) return;
-
-        setIsOrdering(true);
-        const result = await createCustomerOrder({
-            items: [{ productId: product.id, quantity: 1 }],
-        });
-        setIsOrdering(false);
-
-        if (result.order) {
-            setPointsNotice(result.order.pointsEarned);
-            setTimeout(() => setPointsNotice(null), 3000);
-        }
-    };
+    const { addItem, decrementItem, getItemQuantity, openCart } = useCart();
+    const quantityInCart = getItemQuantity(product.id);
 
     return (
         <article className="group flex flex-col overflow-hidden rounded-lg bg-surface shadow-md transition duration-300 hover:-translate-y-1.5 hover:shadow-xl">
@@ -66,24 +45,51 @@ export default function ProductCard({ product }: { product: Product }) {
                     <span className="text-lg font-bold text-secondary">
                         {formatPrice(product.price)}
                     </span>
-                    <div className="flex items-center gap-2">
-                        {pointsNotice !== null && (
-                            <span
-                                role="status"
-                                className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-bold text-emerald-800 dark:text-emerald-300"
+
+                    {quantityInCart > 0 ? (
+                        <div
+                            role="group"
+                            aria-label={`Cantidad de ${product.name} en tu bolsa`}
+                            className="inline-flex items-center rounded-full border border-primary/25 bg-background p-0.5"
+                        >
+                            <button
+                                type="button"
+                                onClick={() => decrementItem(product.id)}
+                                aria-label={
+                                    quantityInCart === 1
+                                        ? `Quitar ${product.name} de la bolsa`
+                                        : `Disminuir cantidad de ${product.name}`
+                                }
+                                className={`inline-flex size-11 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-sm font-bold text-primary transition hover:bg-primary/10 active:scale-95 ${focusRing}`}
                             >
-                                +{pointsNotice} pts
-                            </span>
-                        )}
+                                -
+                            </button>
+                            <button
+                                type="button"
+                                onClick={openCart}
+                                aria-label={`Ver ${quantityInCart} en tu bolsa`}
+                                className={`inline-flex min-h-11 min-w-8 cursor-pointer items-center justify-center border-none bg-transparent px-1.5 text-xs font-bold text-primary ${focusRing}`}
+                            >
+                                {quantityInCart}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => addItem(product, 1)}
+                                aria-label={`Agregar otra unidad de ${product.name}`}
+                                className={`inline-flex size-11 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-sm font-bold text-primary transition hover:bg-primary/10 active:scale-95 ${focusRing}`}
+                            >
+                                +
+                            </button>
+                        </div>
+                    ) : (
                         <Button
                             variant="icon"
-                            disabled={isOrdering}
-                            onClick={() => void handleBuyNow()}
-                            aria-label={`Comprar ${product.name} y ganar puntos`}
+                            onClick={() => addItem(product, 1)}
+                            aria-label={`Agregar ${product.name} al carrito`}
                         >
                             <CartLarge5 aria-hidden="true" />
                         </Button>
-                    </div>
+                    )}
                 </div>
             </div>
         </article>

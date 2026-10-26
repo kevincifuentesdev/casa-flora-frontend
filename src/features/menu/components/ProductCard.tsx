@@ -1,13 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { CartAdd } from "reicon-react";
 
-import { useSession } from "@/features/auth/hooks/useSession";
-import { createCustomerOrder } from "@/features/auth/services/authService";
+import { useCart } from "@/features/cart/hooks/useCart";
 import { formatPrice, type Product } from "@/features/products/domain/product";
+
+const focusRing =
+    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary";
 
 export default function ProductCard({
     product,
@@ -16,29 +16,8 @@ export default function ProductCard({
     product: Product;
     index: number;
 }) {
-    const router = useRouter();
-    const { isAuthenticated } = useSession();
-    const [isOrdering, setIsOrdering] = useState(false);
-    const [pointsNotice, setPointsNotice] = useState<number | null>(null);
-
-    const handleBuyNow = async () => {
-        if (!isAuthenticated) {
-            router.push("/login");
-            return;
-        }
-        if (isOrdering) return;
-
-        setIsOrdering(true);
-        const result = await createCustomerOrder({
-            items: [{ productId: product.id, quantity: 1 }],
-        });
-        setIsOrdering(false);
-
-        if (result.order) {
-            setPointsNotice(result.order.pointsEarned);
-            setTimeout(() => setPointsNotice(null), 3000);
-        }
-    };
+    const { addItem, decrementItem, getItemQuantity, openCart } = useCart();
+    const quantityInCart = getItemQuantity(product.id);
 
     return (
         <div
@@ -76,22 +55,51 @@ export default function ProductCard({
                     <span className="text-sm font-bold text-secondary">
                         {formatPrice(product.price)}
                     </span>
-                    <div className="flex items-center gap-2">
-                        {pointsNotice !== null && (
-                            <span
-                                role="status"
-                                className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-bold text-emerald-800 dark:text-emerald-300"
+
+                    {quantityInCart > 0 ? (
+                        <div className="flex items-center gap-1.5">
+                            <div
+                                role="group"
+                                aria-label={`Cantidad de ${product.name} en tu bolsa`}
+                                className="inline-flex items-center rounded-full border border-primary/25 bg-background p-0.5"
                             >
-                                +{pointsNotice} pts
-                            </span>
-                        )}
+                                <button
+                                    type="button"
+                                    onClick={() => decrementItem(product.id)}
+                                    aria-label={
+                                        quantityInCart === 1
+                                            ? `Quitar ${product.name} de la bolsa`
+                                            : `Disminuir cantidad de ${product.name}`
+                                    }
+                                    className={`inline-flex size-11 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-sm font-bold text-primary transition hover:bg-primary/10 active:scale-95 ${focusRing}`}
+                                >
+                                    -
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={openCart}
+                                    aria-label={`Ver ${quantityInCart} en tu bolsa`}
+                                    className={`inline-flex min-h-11 min-w-8 cursor-pointer items-center justify-center border-none bg-transparent px-1.5 text-xs font-bold text-primary ${focusRing}`}
+                                >
+                                    {quantityInCart}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => addItem(product, 1)}
+                                    aria-label={`Agregar otra unidad de ${product.name}`}
+                                    className={`inline-flex size-11 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-sm font-bold text-primary transition hover:bg-primary/10 active:scale-95 ${focusRing}`}
+                                >
+                                    +
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
                         <button
                             type="button"
-                            disabled={isOrdering}
-                            onClick={() => void handleBuyNow()}
-                            aria-label={`Comprar ${product.name} y ganar puntos`}
-                            title="Comprar y ganar puntos"
-                            className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-full border-none bg-transparent p-2 text-primary transition hover:bg-primary/8 disabled:opacity-50"
+                            onClick={() => addItem(product, 1)}
+                            aria-label={`Agregar ${product.name} al carrito`}
+                            title="Agregar al carrito"
+                            className={`inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-full border-none bg-transparent p-2 text-primary transition hover:bg-primary/8 active:scale-95 ${focusRing}`}
                         >
                             <CartAdd
                                 width={24}
@@ -100,7 +108,7 @@ export default function ProductCard({
                                 className="size-6 text-inherit"
                             />
                         </button>
-                    </div>
+                    )}
                 </div>
             </div>
         </div>

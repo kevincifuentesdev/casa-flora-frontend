@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Nunito_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "@/features/auth/context/SessionContext";
+import CartDrawer from "@/features/cart/components/CartDrawer";
+import { CartProvider } from "@/features/cart/context/CartContext";
 import BottomNavbar from "@/features/common/components/BottomNavbar";
 import Footer from "@/features/common/components/Footer";
 import Navbar from "@/features/common/components/Navbar";
@@ -27,10 +29,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="es" className={`${nunitoSans.variable} ${playfairDisplay.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <SessionProvider>
-          <Navbar />
-          <main className="flex-1">{children}</main>
-          <Footer />
-          <BottomNavbar />
+          <CartProvider>
+            <Navbar />
+            <main className="flex-1">{children}</main>
+            <Footer />
+            <BottomNavbar />
+            <CartDrawer />
+          </CartProvider>
         </SessionProvider>
       </body>
     </html>

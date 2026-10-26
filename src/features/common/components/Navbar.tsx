@@ -6,11 +6,13 @@ import { startTransition, useEffect, useState } from "react";
 
 import { Moon, CartLarge5 } from "reicon-react";
 import SessionActions from "@/features/auth/components/SessionActions";
+import { useCart } from "@/features/cart/hooks/useCart";
 import Button from "./Button";
 import { navLinks } from "../services/navigation";
 
 export default function Navbar() {
     const pathname = usePathname();
+    const { totalItems, openCart } = useCart();
 
     const [darkTheme, setDarkTheme] = useState(false);
 
@@ -84,9 +86,28 @@ export default function Navbar() {
                 </div>
 
                 <div className="flex items-center gap-1 md:gap-2">
-                    <Button variant="icon" aria-label="Abrir carrito de compras">
-                        <CartLarge5 />
-                    </Button>
+                    <div className="relative">
+                        <Button
+                            variant="icon"
+                            onClick={openCart}
+                            aria-haspopup="dialog"
+                            aria-label={
+                                totalItems > 0
+                                    ? `Abrir carrito de compras (${totalItems} ${totalItems === 1 ? "producto" : "productos"})`
+                                    : "Abrir carrito de compras"
+                            }
+                        >
+                            <CartLarge5 />
+                        </Button>
+                        {totalItems > 0 && (
+                            <span
+                                aria-hidden="true"
+                                className="pointer-events-none absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground shadow-xs"
+                            >
+                                {totalItems > 99 ? "99+" : totalItems}
+                            </span>
+                        )}
+                    </div>
                     <SessionActions />
                 </div>
             </nav>

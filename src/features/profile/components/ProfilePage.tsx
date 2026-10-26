@@ -18,7 +18,6 @@ import { useSession } from "@/features/auth/hooks/useSession";
 import {
     addUserAddress,
     addUserPaymentMethod,
-    createCustomerOrder,
     removeUserAddress,
     removeUserPaymentMethod,
     updateUserProfile,
@@ -28,8 +27,9 @@ import {
     cancelMyBooking,
     fetchMyBookings,
 } from "@/features/booking/services/bookingService";
+import { useCart } from "@/features/cart/hooks/useCart";
 import { ApiClientError } from "@/features/common/services/apiClient";
-import { formatPrice } from "@/features/products/domain/product";
+import { formatPrice, type Product } from "@/features/products/domain/product";
 
 type ProfileFormDraft = {
     firstName: string;
@@ -95,6 +95,7 @@ export function ProfilePage() {
     const router = useRouter();
     const { session, isLoading: isSessionLoading, logout, refreshSession } =
         useSession();
+    const { addItem, openCart } = useCart();
 
     const [activeModal, setActiveModal] = useState<ActiveActionModal>(null);
     const [overrides, setOverrides] = useState<Partial<ProfileFormDraft>>({});
@@ -132,9 +133,6 @@ export function ProfilePage() {
     const [isLoadingBookings, setIsLoadingBookings] = useState(true);
     const [bookingsError, setBookingsError] = useState<string | null>(null);
     const [cancellingId, setCancellingId] = useState<string | null>(null);
-
-    const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-    const [orderBanner, setOrderBanner] = useState<string | null>(null);
 
     const draft: ProfileFormDraft = {
         firstName: overrides.firstName ?? session?.user?.firstName ?? "",
@@ -440,26 +438,23 @@ export function ProfilePage() {
         router.push("/");
     };
 
-    const handleBuyFeaturedProduct = async (productId: string) => {
-        if (isPlacingOrder) return;
-        setIsPlacingOrder(true);
-        setOrderBanner(null);
-
-        const result = await createCustomerOrder({
-            items: [{ productId, quantity: 1 }],
-        });
-        setIsPlacingOrder(false);
-
-        if (result.error) {
-            setOrderBanner(result.error);
-            return;
-        }
-
-        if (result.order) {
-            setOrderBanner(
-                `¡Pedido #${result.order.orderNumber} confirmado! Sumaste +${result.order.pointsEarned} puntos en tu cuenta.`,
-            );
-        }
+    const handleAddFeaturedToCart = (dish: {
+        productId: string;
+        name: string;
+        description: string;
+        imageUrl: string;
+        price: number;
+    }) => {
+        const productToAdd: Product = {
+            id: dish.productId,
+            name: dish.name,
+            description: dish.description,
+            imageUrl: dish.imageUrl,
+            price: dish.price,
+            categories: ["Favorito"],
+        };
+        addItem(productToAdd, 1);
+        openCart();
     };
 
     if (isSessionLoading) {
@@ -904,15 +899,6 @@ export function ProfilePage() {
                         </span>
                     </div>
 
-                    {orderBanner && (
-                        <div
-                            role="status"
-                            className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs font-semibold text-emerald-800 dark:text-emerald-300"
-                        >
-                            {orderBanner}
-                        </div>
-                    )}
-
                     <article className="rounded-2xl border border-foreground-muted/10 bg-surface p-4 shadow-(--shadow-ambient-md) md:hidden">
                         <div className="flex items-center gap-3.5">
                             <div className="relative size-20 shrink-0 overflow-hidden rounded-xl">
@@ -970,13 +956,10 @@ export function ProfilePage() {
 
                             <button
                                 type="button"
-                                disabled={isPlacingOrder}
                                 onClick={() =>
-                                    void handleBuyFeaturedProduct(
-                                        featuredDish.productId,
-                                    )
+                                    handleAddFeaturedToCart(featuredDish)
                                 }
-                                className={`inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full bg-[#4b151b] px-5 py-2.5 text-xs font-bold text-white shadow-xs transition hover:opacity-95 disabled:opacity-50 ${focusRing}`}
+                                className={`inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full bg-[#4b151b] px-5 py-2.5 text-xs font-bold text-white shadow-xs transition hover:opacity-95 ${focusRing}`}
                             >
                                 <svg
                                     aria-hidden="true"
@@ -992,9 +975,7 @@ export function ProfilePage() {
                                         d="M4 4v5h5M20 12a8 8 0 11-2.34-5.66L4 9"
                                     />
                                 </svg>
-                                {isPlacingOrder
-                                    ? "Procesando..."
-                                    : featuredDish.ctaLabel}
+                                {featuredDish.ctaLabel}
                             </button>
                         </div>
                     </article>
@@ -1037,13 +1018,10 @@ export function ProfilePage() {
                             <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
                                 <button
                                     type="button"
-                                    disabled={isPlacingOrder}
                                     onClick={() =>
-                                        void handleBuyFeaturedProduct(
-                                            featuredDish.productId,
-                                        )
+                                        handleAddFeaturedToCart(featuredDish)
                                     }
-                                    className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full bg-[#a87c4f] px-6 py-2.5 text-xs font-bold text-white shadow-xs transition hover:bg-[#936a41] disabled:opacity-50 ${focusRing}`}
+                                    className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full bg-[#a87c4f] px-6 py-2.5 text-xs font-bold text-white shadow-xs transition hover:bg-[#936a41] ${focusRing}`}
                                 >
                                     <svg
                                         aria-hidden="true"
@@ -1059,9 +1037,7 @@ export function ProfilePage() {
                                             d="M4 4v5h5M20 12a8 8 0 11-2.34-5.66L4 9"
                                         />
                                     </svg>
-                                    {isPlacingOrder
-                                        ? "Procesando..."
-                                        : featuredDish.ctaLabel}
+                                    {featuredDish.ctaLabel}
                                 </button>
                             </div>
                         </div>
