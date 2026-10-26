@@ -69,14 +69,10 @@ export function BookingFormProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         if (!draft.date || !draft.environment) {
-            setSlotAvailability({});
-            setAvailabilityError(null);
             return;
         }
 
         let cancelled = false;
-        setIsLoadingAvailability(true);
-        setAvailabilityError(null);
 
         fetchBookingAvailability(draft.date, draft.environment)
             .then((slots) => {
@@ -86,6 +82,7 @@ export function BookingFormProvider({ children }: { children: ReactNode }) {
                     map[slot.time] = slot;
                 }
                 setSlotAvailability(map);
+                setAvailabilityError(null);
             })
             .catch(() => {
                 if (!cancelled) {
@@ -118,7 +115,13 @@ export function BookingFormProvider({ children }: { children: ReactNode }) {
 
     const selectEnvironment = useCallback(
         (environment: EnvironmentId) => {
-            setDraft((prev) => ({ ...prev, environment }));
+            setDraft((prev) => {
+                if (prev.date) {
+                    setIsLoadingAvailability(true);
+                    setAvailabilityError(null);
+                }
+                return { ...prev, environment };
+            });
             clearError("environment");
         },
         [clearError],
@@ -126,6 +129,8 @@ export function BookingFormProvider({ children }: { children: ReactNode }) {
 
     const selectDate = useCallback(
         (date: string) => {
+            setIsLoadingAvailability(true);
+            setAvailabilityError(null);
             setDraft((prev) => ({ ...prev, date }));
             clearError("date");
         },

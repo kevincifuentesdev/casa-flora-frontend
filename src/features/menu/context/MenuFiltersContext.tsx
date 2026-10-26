@@ -87,8 +87,37 @@ export function MenuFiltersProvider({ children }: { children: ReactNode }) {
     }, [globalMaxPrice]);
 
     useEffect(() => {
-        void reloadCatalog();
-    }, [reloadCatalog]);
+        let cancelled = false;
+
+        fetchProducts()
+            .then((response) => {
+                if (cancelled) return;
+                setCatalogProducts(response.data);
+                const nextMax =
+                    response.meta?.maxPrice ??
+                    (response.data.length > 0
+                        ? getMaxPrice(response.data)
+                        : 25000);
+                setMaxPrice(nextMax);
+                setError(null);
+            })
+            .catch(() => {
+                if (!cancelled) {
+                    setError(
+                        "No pudimos sincronizar el menú con el servidor. Mostrando catálogo local.",
+                    );
+                }
+            })
+            .finally(() => {
+                if (!cancelled) {
+                    setIsLoading(false);
+                }
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     useEffect(() => {
         const timeout = setTimeout(
