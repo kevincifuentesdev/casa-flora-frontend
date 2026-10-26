@@ -1410,7 +1410,6 @@ export default function AdminDashboardPage() {
                                     className={`inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-accent px-4 py-2 text-xs font-bold text-primary transition hover:bg-background-alt ${focusRing}`}
                                 >
                                     <Refresh className="size-3.5 shrink-0" aria-hidden="true" />
-                                    <span>Actualizar lista</span>
                                 </button>
                             </div>
                         </div>
@@ -1581,7 +1580,6 @@ export default function AdminDashboardPage() {
                                                         className={`inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-foreground-muted/30 bg-background px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-background-alt ${focusRing}`}
                                                     >
                                                         <Eye className="size-4 shrink-0" aria-hidden="true" />
-                                                        <span>Consultar datos</span>
                                                     </button>
                                                 </div>
                                             </div>
@@ -2072,7 +2070,6 @@ export default function AdminDashboardPage() {
                                                     className={`inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-foreground-muted/30 bg-background px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-background-alt ${focusRing}`}
                                                 >
                                                     <Eye className="size-4 shrink-0" aria-hidden="true" />
-                                                    <span>Ver ficha completa</span>
                                                 </button>
                                             </div>
                                         </li>
@@ -2109,7 +2106,6 @@ export default function AdminDashboardPage() {
                                 className={`inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-(--shadow-ambient-sm) transition hover:opacity-90 ${focusRing}`}
                             >
                                 <Add className="size-4 shrink-0" aria-hidden="true" />
-                                <span>Agregar nuevo plato</span>
                             </button>
                         </div>
 
@@ -2394,7 +2390,6 @@ export default function AdminDashboardPage() {
                                                         className={`inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full border border-foreground-muted/25 bg-surface px-3 py-1.5 text-xs font-semibold text-foreground-muted transition hover:text-foreground ${focusRing}`}
                                                     >
                                                         <Copy className="size-3.5 shrink-0" aria-hidden="true" />
-                                                        <span>Duplicar</span>
                                                     </button>
                                                     <button
                                                         type="button"
@@ -2406,7 +2401,6 @@ export default function AdminDashboardPage() {
                                                         className={`inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-xs font-bold text-primary-foreground transition hover:opacity-90 ${focusRing}`}
                                                     >
                                                         <Edit2 className="size-3.5 shrink-0" aria-hidden="true" />
-                                                        <span>Editar</span>
                                                     </button>
                                                     <button
                                                         type="button"
@@ -2419,7 +2413,6 @@ export default function AdminDashboardPage() {
                                                         className={`inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full border border-destructive/35 px-3 py-1.5 text-xs font-semibold text-destructive transition hover:bg-destructive/10 disabled:opacity-60 ${focusRing}`}
                                                     >
                                                         <Trash className="size-3.5 shrink-0" aria-hidden="true" />
-                                                        <span>Eliminar</span>
                                                     </button>
                                                 </div>
                                             </div>
@@ -2550,7 +2543,6 @@ export default function AdminDashboardPage() {
                                 className={`inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full border border-foreground-muted/25 px-3.5 py-1.5 text-xs font-bold text-foreground hover:bg-background-alt ${focusRing}`}
                             >
                                 <X className="size-4 shrink-0" aria-hidden="true" />
-                                <span>Cerrar (Esc)</span>
                             </button>
                         </div>
 
@@ -2794,7 +2786,6 @@ export default function AdminDashboardPage() {
                                 className={`inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full border border-foreground-muted/25 px-3.5 py-1.5 text-xs font-bold text-foreground hover:bg-background-alt ${focusRing}`}
                             >
                                 <X className="size-4 shrink-0" aria-hidden="true" />
-                                <span>Cerrar (Esc)</span>
                             </button>
                         </div>
 
@@ -3154,7 +3145,6 @@ export default function AdminDashboardPage() {
                                 className={`inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full border border-foreground-muted/25 px-3.5 py-1.5 text-xs font-bold text-foreground hover:bg-background-alt ${focusRing}`}
                             >
                                 <X className="size-4 shrink-0" aria-hidden="true" />
-                                <span>Cerrar (Esc)</span>
                             </button>
                         </div>
 
