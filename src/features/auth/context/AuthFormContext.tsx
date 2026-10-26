@@ -18,6 +18,7 @@ import type {
     LoginDraft,
     LoginErrors,
     LoginField,
+    Session,
     SignUpDraft,
     SignUpErrors,
     SignUpField,
@@ -39,7 +40,7 @@ export interface AuthFormContextValue {
     setMode: (mode: AuthMode) => void;
     updateLoginField: (field: LoginField, value: string) => void;
     updateSignUpField: (field: SignUpField, value: string) => void;
-    submitLogin: () => Promise<boolean>;
+    submitLogin: () => Promise<Session | null>;
     submitSignUp: () => Promise<boolean>;
 }
 
@@ -111,25 +112,28 @@ export function AuthFormProvider({
         [],
     );
 
-    const submitLogin = useCallback(async () => {
+    const submitLogin = useCallback(async (): Promise<Session | null> => {
         setFormError(null);
         const errors = validateLoginDraft(loginDraft);
 
         if (Object.keys(errors).length > 0) {
             setLoginErrors(errors);
             setErrorVersion((v) => v + 1);
-            return false;
+            return null;
         }
 
         setIsSubmitting(true);
         try {
             const result = await loginWithBetterAuth(loginDraft);
-            if (result.error) {
-                setFormError(result.error);
-                return false;
+            if (result.error || !result.session) {
+                setFormError(
+                    result.error ??
+                        "Credenciales inválidas. Verifica tu usuario o contraseña.",
+                );
+                return null;
             }
             setLoginErrors({});
-            return true;
+            return result.session;
         } finally {
             setIsSubmitting(false);
         }

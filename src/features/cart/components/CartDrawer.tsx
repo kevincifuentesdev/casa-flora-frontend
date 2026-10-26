@@ -44,6 +44,7 @@ export default function CartDrawer() {
         removeItem,
         clearCart,
     } = useCart();
+    const isAdmin = session?.user?.role === "admin";
 
     const [deliveryMethod, setDeliveryMethod] =
         useState<DeliveryMethod>("pickup");
@@ -384,7 +385,7 @@ export default function CartDrawer() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                        {paymentStage === "idle" && items.length > 0 && (
+                        {paymentStage === "idle" && items.length > 0 && !isAdmin && (
                             <button
                                 type="button"
                                 onClick={clearCart}
@@ -418,7 +419,26 @@ export default function CartDrawer() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto px-5 py-4 sm:px-6">
-                    {paymentStage === "waiting" && activeSession ? (
+                    {isAdmin ? (
+                        <div className="flex flex-col items-center justify-center rounded-2xl border border-foreground-muted/15 bg-background p-8 text-center">
+                            <span className="rounded-full bg-primary/10 px-4 py-1 text-xs font-bold text-primary">
+                                Cuenta de Administrador
+                            </span>
+                            <h3 className="mt-4 mb-2 font-display text-xl text-primary">
+                                Pedidos Deshabilitados
+                            </h3>
+                            <p className="max-w-xs text-sm text-foreground-muted">
+                                Las cuentas de administrador no realizan pedidos de comensales. Toda la gestión se realiza desde el panel de administración.
+                            </p>
+                            <Link
+                                href="/admin"
+                                onClick={closeCart}
+                                className="mt-5 inline-flex items-center justify-center rounded-full bg-primary px-5 py-2.5 text-xs font-bold text-primary-foreground no-underline transition hover:opacity-90"
+                            >
+                                Ir al Panel de Administración
+                            </Link>
+                        </div>
+                    ) : paymentStage === "waiting" && activeSession ? (
                         <div className="flex flex-col items-center justify-center rounded-2xl border border-foreground-muted/15 bg-background p-6 text-center">
                             <span className="flex size-14 items-center justify-center rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300">
                                 <svg
@@ -1245,7 +1265,7 @@ export default function CartDrawer() {
                     )}
                 </div>
 
-                {paymentStage === "idle" && items.length > 0 && (
+                {paymentStage === "idle" && items.length > 0 && !isAdmin && (
                     <div className="border-t border-foreground-muted/15 bg-background px-5 py-4 pb-6 sm:px-6">
                         {checkoutError && (
                             <div

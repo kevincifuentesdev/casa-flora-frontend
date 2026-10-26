@@ -60,33 +60,7 @@ export default function Navbar() {
                 </h1>
 
                 <div className="hidden items-center gap-6 md:flex">
-                    {navLinks.map((link) => {
-                        const isActive = pathname === link.href;
-
-                        return (
-                            <Link
-                                key={link.href}
-                                href={link.href}
-                                className={[
-                                    "relative px-0 py-1.5",
-                                    "font-body text-sm/5 tracking-wider text-foreground-muted no-underline",
-                                    "transition-colors duration-300 ease-in-out",
-                                    "after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5",
-                                    "after:origin-center after:scale-x-0 after:bg-primary",
-                                    "after:transition-transform after:duration-300 after:ease-in-out",
-                                    "hover:text-primary hover:after:scale-x-100",
-                                    isActive &&
-                                        "font-bold text-primary after:scale-x-100",
-                                ]
-                                    .filter(Boolean)
-                                    .join(" ")}
-                                aria-current={isActive ? "page" : undefined}
-                            >
-                                {link.label}
-                            </Link>
-                        );
-                    })}
-                    {isAdmin && (
+                    {isAdmin ? (
                         <Link
                             href="/admin"
                             className={[
@@ -106,34 +80,63 @@ export default function Navbar() {
                                 pathname === "/admin" ? "page" : undefined
                             }
                         >
-                            Administración
+                            Panel de Administración
                         </Link>
+                    ) : (
+                        navLinks.map((link) => {
+                            const isActive = pathname === link.href;
+
+                            return (
+                                <Link
+                                    key={link.href}
+                                    href={link.href}
+                                    className={[
+                                        "relative px-0 py-1.5",
+                                        "font-body text-sm/5 tracking-wider text-foreground-muted no-underline",
+                                        "transition-colors duration-300 ease-in-out",
+                                        "after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5",
+                                        "after:origin-center after:scale-x-0 after:bg-primary",
+                                        "after:transition-transform after:duration-300 after:ease-in-out",
+                                        "hover:text-primary hover:after:scale-x-100",
+                                        isActive &&
+                                            "font-bold text-primary after:scale-x-100",
+                                    ]
+                                        .filter(Boolean)
+                                        .join(" ")}
+                                    aria-current={isActive ? "page" : undefined}
+                                >
+                                    {link.label}
+                                </Link>
+                            );
+                        })
                     )}
                 </div>
 
                 <div className="flex items-center gap-1 md:gap-2">
-                    <div className="relative">
-                        <Button
-                            variant="icon"
-                            onClick={openCart}
-                            aria-haspopup="dialog"
-                            aria-label={
-                                totalItems > 0
-                                    ? `Abrir carrito de compras (${totalItems} ${totalItems === 1 ? "producto" : "productos"})`
-                                    : "Abrir carrito de compras"
-                            }
-                        >
-                            <CartLarge5 />
-                        </Button>
-                        {totalItems > 0 && (
-                            <span
-                                aria-hidden="true"
-                                className="pointer-events-none absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground shadow-xs"
+                    {!isAdmin && (
+                        <div className="relative">
+                            <Button
+                                variant="icon"
+                                onClick={openCart}
+                                aria-haspopup="dialog"
+                                aria-label={
+                                    totalItems > 0
+                                        ? `Abrir carrito de compras (${totalItems} ${totalItems === 1 ? "producto" : "productos"})`
+                                        : "Abrir carrito de compras"
+                                }
                             >
-                                {totalItems > 99 ? "99+" : totalItems}
-                            </span>
-                        )}
-                    </div>
+                                <CartLarge5 />
+                            </Button>
+                            {totalItems > 0 && (
+                                <span
+                                    aria-hidden="true"
+                                    className="pointer-events-none absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground shadow-xs"
+                                >
+                                    {totalItems > 99 ? "99+" : totalItems}
+                                </span>
+                            )}
+                        </div>
+                    )}
                     <SessionActions />
                 </div>
             </nav>

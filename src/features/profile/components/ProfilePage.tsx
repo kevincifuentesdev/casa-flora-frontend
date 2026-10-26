@@ -759,53 +759,78 @@ export function ProfilePage() {
                     <div className="relative z-10 flex items-start justify-between gap-3">
                         <div className="min-w-0">
                             <p className="m-0 text-[11px] font-bold tracking-[0.14em] text-[#e8b98a] uppercase">
-                                FIDELIZACIÓN
+                                {user.role === "admin"
+                                    ? "PANEL DE CONTROL"
+                                    : "FIDELIZACIÓN"}
                             </p>
 
                             <h2 className="m-0 mt-2 font-display text-2xl font-bold text-white sm:text-3xl">
-                                Tu Próxima Recompensa
+                                {user.role === "admin"
+                                    ? "Rol Administrador"
+                                    : "Tu Próxima Recompensa"}
                             </h2>
 
                             <p className="m-0 mt-1 text-xs text-white/85 sm:text-sm">
-                                {loyalty.rewardName} (Faltan{" "}
-                                {loyalty.pointsRemaining} pts)
+                                {user.role === "admin"
+                                    ? "Gestiona pedidos, reservas y productos desde el panel administrativo."
+                                    : `${loyalty.rewardName} (Faltan ${loyalty.pointsRemaining} pts)`}
                             </p>
                         </div>
 
-                        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#f5c58b] px-3.5 py-1.5 text-xs font-bold text-[#2b1d19] shadow-xs">
-                            <svg
-                                aria-hidden="true"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
-                                className="size-3.5 text-[#4b030f]"
+                        {user.role === "admin" ? (
+                            <Link
+                                href="/admin"
+                                className="inline-flex shrink-0 items-center rounded-full bg-[#f5c58b] px-4 py-1.5 text-xs font-bold text-[#2b1d19] no-underline shadow-xs hover:bg-white transition"
                             >
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                            </svg>
-                            {loyalty.points} pts
-                        </span>
+                                Dashboard
+                            </Link>
+                        ) : (
+                            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#f5c58b] px-3.5 py-1.5 text-xs font-bold text-[#2b1d19] shadow-xs">
+                                <svg
+                                    aria-hidden="true"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                    className="size-3.5 text-[#4b030f]"
+                                >
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                                {loyalty.points} pts
+                            </span>
+                        )}
                     </div>
 
-                    <div className="relative z-10 mt-6 sm:mt-8">
-                        <div
-                            role="progressbar"
-                            aria-label="Progreso de fidelización"
-                            aria-valuenow={loyalty.pointsInCurrentCycle}
-                            aria-valuemin={0}
-                            aria-valuemax={loyalty.nextRewardGoal}
-                            className="h-2.5 w-full overflow-hidden rounded-full bg-[#31040b]"
-                        >
+                    {user.role === "admin" ? (
+                        <div className="relative z-10 mt-6 sm:mt-8">
+                            <Link
+                                href="/admin"
+                                className="inline-flex min-h-11 items-center justify-center rounded-full bg-[#f5c58b] px-6 py-2.5 text-xs font-bold text-[#2b1d19] no-underline shadow-md transition hover:bg-white"
+                            >
+                                Ir al Panel de Administración
+                            </Link>
+                        </div>
+                    ) : (
+                        <div className="relative z-10 mt-6 sm:mt-8">
                             <div
-                                className="h-full rounded-full bg-[#f5c58b] transition-all duration-500"
-                                style={{
-                                    width: `${Math.max(6, loyalty.progressPercent)}%`,
-                                }}
-                            />
+                                role="progressbar"
+                                aria-label="Progreso de fidelización"
+                                aria-valuenow={loyalty.pointsInCurrentCycle}
+                                aria-valuemin={0}
+                                aria-valuemax={loyalty.nextRewardGoal}
+                                className="h-2.5 w-full overflow-hidden rounded-full bg-[#31040b]"
+                            >
+                                <div
+                                    className="h-full rounded-full bg-[#f5c58b] transition-all duration-500"
+                                    style={{
+                                        width: `${Math.max(6, loyalty.progressPercent)}%`,
+                                    }}
+                                />
+                            </div>
+                            <div className="mt-2 flex items-center justify-between text-xs font-semibold text-[#e8b98a]">
+                                <span>0 pts</span>
+                                <span>{loyalty.nextRewardGoal} pts</span>
+                            </div>
                         </div>
-                        <div className="mt-2 flex items-center justify-between text-xs font-semibold text-[#e8b98a]">
-                            <span>0 pts</span>
-                            <span>{loyalty.nextRewardGoal} pts</span>
-                        </div>
-                    </div>
+                    )}
                 </div>
             </div>
 
@@ -1753,18 +1778,29 @@ export function ProfilePage() {
                         {activeModal === "orders" && (
                             <div>
                                 <div className="mb-4 flex flex-wrap items-center gap-2.5">
-                                    <Link
-                                        href="/menu"
-                                        className={`inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground no-underline transition hover:opacity-90 ${focusRing}`}
-                                    >
-                                        Pedir en el menú
-                                    </Link>
-                                    <Link
-                                        href="/booking"
-                                        className={`inline-flex min-h-11 items-center justify-center rounded-full border border-accent px-5 py-2 text-xs font-semibold text-primary no-underline transition hover:bg-background-alt ${focusRing}`}
-                                    >
-                                        Nueva reserva
-                                    </Link>
+                                    {user.role === "admin" ? (
+                                        <Link
+                                            href="/admin"
+                                            className={`inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground no-underline transition hover:opacity-90 ${focusRing}`}
+                                        >
+                                            Ir al Panel de Administración
+                                        </Link>
+                                    ) : (
+                                        <>
+                                            <Link
+                                                href="/menu"
+                                                className={`inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground no-underline transition hover:opacity-90 ${focusRing}`}
+                                            >
+                                                Pedir en el menú
+                                            </Link>
+                                            <Link
+                                                href="/booking"
+                                                className={`inline-flex min-h-11 items-center justify-center rounded-full border border-accent px-5 py-2 text-xs font-semibold text-primary no-underline transition hover:bg-background-alt ${focusRing}`}
+                                            >
+                                                Nueva reserva
+                                            </Link>
+                                        </>
+                                    )}
                                 </div>
 
                                 <div>

@@ -1,8 +1,10 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { CartAdd } from "reicon-react";
 
+import { useSession } from "@/features/auth/hooks/useSession";
 import { useCart } from "@/features/cart/hooks/useCart";
 import { formatPrice, type Product } from "@/features/products/domain/product";
 
@@ -16,6 +18,8 @@ export default function ProductCard({
     product: Product;
     index: number;
 }) {
+    const { session } = useSession();
+    const isAdmin = session?.user?.role === "admin";
     const { addItem, decrementItem, getItemQuantity, openCart } = useCart();
     const quantityInCart = getItemQuantity(product.id);
 
@@ -56,7 +60,14 @@ export default function ProductCard({
                         {formatPrice(product.price)}
                     </span>
 
-                    {quantityInCart > 0 ? (
+                    {isAdmin ? (
+                        <Link
+                            href="/admin"
+                            className="inline-flex items-center rounded-full bg-surface-alt px-3 py-1.5 font-body text-xs font-semibold text-primary no-underline transition hover:bg-primary hover:text-primary-foreground"
+                        >
+                            Gestionar producto
+                        </Link>
+                    ) : quantityInCart > 0 ? (
                         <div className="flex items-center gap-1.5">
                             <div
                                 role="group"
