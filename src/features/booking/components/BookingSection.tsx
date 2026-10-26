@@ -28,7 +28,7 @@ export default function BookingSection() {
                     </div>
                 </div>
             </div>
-            <div className="md:flex-1">
+            <div className="w-full md:flex-1 md:self-center">
                 <BookingFormProvider>
                     <BookingForm />
                 </BookingFormProvider>
