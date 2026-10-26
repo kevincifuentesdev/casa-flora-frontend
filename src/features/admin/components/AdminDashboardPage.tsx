@@ -3,6 +3,19 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+    Add,
+    Calendar,
+    Check,
+    Copy,
+    Edit2,
+    Eye,
+    ForkKnife,
+    Receipt2,
+    Refresh,
+    Trash,
+    X,
+} from "reicon-react";
 
 import type { OrderRecord } from "@/features/auth/domain/session";
 import { useSession } from "@/features/auth/hooks/useSession";
@@ -1089,125 +1102,179 @@ export default function AdminDashboardPage() {
     }
 
     return (
-        <div className="mx-auto w-full max-w-(--container-max) px-(--spacing-margin-mobile) py-8 pb-28 md:px-(--spacing-margin-desktop)">
-            <header className=" static! z-auto! bg-transparent! shadow-none! backdrop-blur-none!">
-                <div className="rounded-2xl border border-foreground-muted/15 bg-surface p-6 shadow-(--shadow-ambient-sm)">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                        <div>
-                            <p className="m-0 text-xs font-bold tracking-wider text-accent uppercase">
-                                Casa Flora • Sede El Poblado
+        <div className="mx-auto w-full max-w-(--container-max) px-(--spacing-margin-mobile) py-6 pb-28 md:px-(--spacing-margin-desktop) md:py-8 md:pb-12">
+            <div className="flex flex-col md:flex-row md:items-start md:gap-8">
+                {/* Desktop Sidebar */}
+                <aside
+                    aria-label="Panel lateral de administración"
+                    className="hidden md:flex md:w-64 lg:w-72 md:shrink-0 md:sticky md:top-24 flex-col gap-5 rounded-2xl border border-foreground-muted/15 bg-surface p-5 shadow-(--shadow-ambient-sm)"
+                >
+                    <div>
+                        <p className="m-0 text-xs font-bold tracking-wider text-accent uppercase">
+                            Casa Flora • Sede El Poblado
+                        </p>
+                        <h1 className="m-0 mt-1 font-display text-xl font-bold text-primary lg:text-2xl">
+                            Panel Operativo
+                        </h1>
+                        <div className="mt-3 rounded-xl border border-foreground-muted/15 bg-background/60 p-3">
+                            <p className="m-0 text-[11px] font-semibold text-foreground-muted">
+                                Sesión activa como:
                             </p>
-                            <h1 className="m-0 mt-1 font-display text-2xl font-bold text-primary md:text-3xl">
-                                Panel Operativo de Administración
-                            </h1>
-                            <p className="m-0 mt-1 text-sm text-foreground-muted">
-                                Sesión activa como{" "}
-                                <strong className="text-foreground">
-                                    {session.user.name}
-                                </strong>{" "}
-                                ({session.user.email})
+                            <p
+                                className="m-0 mt-0.5 truncate text-xs font-bold text-foreground"
+                                title={session.user.name}
+                            >
+                                {session.user.name}
                             </p>
-                        </div>
-
-                        <div
-                            role="tablist"
-                            aria-label="Secciones de administración"
-                            className="flex flex-wrap gap-2"
-                        >
-                            <button
-                                type="button"
-                                role="tab"
-                                aria-selected={activeSection === "orders"}
-                                onClick={() => setActiveSection("orders")}
-                                className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${focusRing} ${
-                                    activeSection === "orders"
-                                        ? "bg-primary text-primary-foreground shadow-(--shadow-ambient-sm)"
-                                        : "border border-foreground-muted/20 bg-background text-foreground hover:bg-background-alt"
-                                }`}
+                            <p
+                                className="m-0 truncate text-[11px] text-foreground-muted"
+                                title={session.user.email}
                             >
-                                <span>Pedidos de cocina</span>
-                                <span
-                                    className={`rounded-full px-2 py-0.5 text-xs ${
-                                        activeSection === "orders"
-                                            ? "bg-primary-foreground/20 text-primary-foreground"
-                                            : "bg-primary/10 text-primary"
-                                    }`}
-                                >
-                                    {orders.length}
-                                </span>
-                            </button>
-
-                            <button
-                                type="button"
-                                role="tab"
-                                aria-selected={activeSection === "bookings"}
-                                onClick={() => setActiveSection("bookings")}
-                                className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${focusRing} ${
-                                    activeSection === "bookings"
-                                        ? "bg-primary text-primary-foreground shadow-(--shadow-ambient-sm)"
-                                        : "border border-foreground-muted/20 bg-background text-foreground hover:bg-background-alt"
-                                }`}
-                            >
-                                <span>Reservas de mesa</span>
-                                <span
-                                    className={`rounded-full px-2 py-0.5 text-xs ${
-                                        activeSection === "bookings"
-                                            ? "bg-primary-foreground/20 text-primary-foreground"
-                                            : "bg-primary/10 text-primary"
-                                    }`}
-                                >
-                                    {bookings.length}
-                                </span>
-                            </button>
-
-                            <button
-                                type="button"
-                                role="tab"
-                                aria-selected={activeSection === "products"}
-                                onClick={() => setActiveSection("products")}
-                                className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${focusRing} ${
-                                    activeSection === "products"
-                                        ? "bg-primary text-primary-foreground shadow-(--shadow-ambient-sm)"
-                                        : "border border-foreground-muted/20 bg-background text-foreground hover:bg-background-alt"
-                                }`}
-                            >
-                                <span>Catálogo de platos</span>
-                                <span
-                                    className={`rounded-full px-2 py-0.5 text-xs ${
-                                        activeSection === "products"
-                                            ? "bg-primary-foreground/20 text-primary-foreground"
-                                            : "bg-primary/10 text-primary"
-                                    }`}
-                                >
-                                    {products.length}
-                                </span>
-                            </button>
+                                {session.user.email}
+                            </p>
                         </div>
                     </div>
-                </div>
-            </header>
 
-            {feedbackBanner && (
-                <div
-                    role={feedbackBanner.type === "error" ? "alert" : "status"}
-                    className={`mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm font-medium ${
-                        feedbackBanner.type === "error"
-                            ? "border-destructive/35 bg-destructive/10 text-destructive"
-                            : "border-primary/25 bg-primary/10 text-primary"
-                    }`}
-                >
-                    <span>{feedbackBanner.message}</span>
-                    <button
-                        type="button"
-                        onClick={() => setFeedbackBanner(null)}
-                        className={`cursor-pointer rounded-lg px-2.5 py-1 text-xs font-bold underline ${focusRing}`}
+                    <div
+                        role="tablist"
+                        aria-label="Secciones de administración"
+                        className="flex flex-col gap-2"
                     >
-                        Cerrar aviso
-                    </button>
-                </div>
-            )}
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={activeSection === "orders"}
+                            onClick={() => setActiveSection("orders")}
+                            className={`inline-flex min-h-12 w-full cursor-pointer items-center justify-between gap-3 rounded-xl px-3.5 py-2.5 text-sm font-bold transition ${focusRing} ${
+                                activeSection === "orders"
+                                    ? "bg-primary text-primary-foreground shadow-(--shadow-ambient-sm)"
+                                    : "border border-foreground-muted/20 bg-background text-foreground hover:bg-background-alt"
+                            }`}
+                        >
+                            <span className="inline-flex items-center gap-2.5">
+                                <Receipt2 className="size-4 shrink-0" aria-hidden="true" />
+                                <span>Pedidos de cocina</span>
+                            </span>
+                            <span
+                                className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                                    activeSection === "orders"
+                                        ? "bg-primary-foreground/20 text-primary-foreground"
+                                        : "bg-primary/10 text-primary"
+                                }`}
+                            >
+                                {orders.length}
+                            </span>
+                        </button>
 
-            {activeSection === "orders" && (
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={activeSection === "bookings"}
+                            onClick={() => setActiveSection("bookings")}
+                            className={`inline-flex min-h-12 w-full cursor-pointer items-center justify-between gap-3 rounded-xl px-3.5 py-2.5 text-sm font-bold transition ${focusRing} ${
+                                activeSection === "bookings"
+                                    ? "bg-primary text-primary-foreground shadow-(--shadow-ambient-sm)"
+                                    : "border border-foreground-muted/20 bg-background text-foreground hover:bg-background-alt"
+                            }`}
+                        >
+                            <span className="inline-flex items-center gap-2.5">
+                                <Calendar className="size-4 shrink-0" aria-hidden="true" />
+                                <span>Reservas de mesa</span>
+                            </span>
+                            <span
+                                className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                                    activeSection === "bookings"
+                                        ? "bg-primary-foreground/20 text-primary-foreground"
+                                        : "bg-primary/10 text-primary"
+                                }`}
+                            >
+                                {bookings.length}
+                            </span>
+                        </button>
+
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={activeSection === "products"}
+                            onClick={() => setActiveSection("products")}
+                            className={`inline-flex min-h-12 w-full cursor-pointer items-center justify-between gap-3 rounded-xl px-3.5 py-2.5 text-sm font-bold transition ${focusRing} ${
+                                activeSection === "products"
+                                    ? "bg-primary text-primary-foreground shadow-(--shadow-ambient-sm)"
+                                    : "border border-foreground-muted/20 bg-background text-foreground hover:bg-background-alt"
+                            }`}
+                        >
+                            <span className="inline-flex items-center gap-2.5">
+                                <ForkKnife className="size-4 shrink-0" aria-hidden="true" />
+                                <span>Catálogo de platos</span>
+                            </span>
+                            <span
+                                className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                                    activeSection === "products"
+                                        ? "bg-primary-foreground/20 text-primary-foreground"
+                                        : "bg-primary/10 text-primary"
+                                }`}
+                            >
+                                {products.length}
+                            </span>
+                        </button>
+                    </div>
+
+                    <div className="border-t border-foreground-muted/15 pt-3">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (activeSection === "orders") void loadOrders();
+                                else if (activeSection === "bookings") void loadBookings();
+                                else void loadProducts();
+                            }}
+                            className={`inline-flex min-h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-foreground-muted/25 bg-background px-3 py-2 text-xs font-bold text-primary transition hover:bg-background-alt ${focusRing}`}
+                        >
+                            <Refresh className="size-3.5 shrink-0" aria-hidden="true" />
+                            <span>Actualizar datos</span>
+                        </button>
+                    </div>
+                </aside>
+
+                {/* Main Content Area */}
+                <main className="min-w-0 flex-1 space-y-6">
+                    {/* Mobile Header (shown only on mobile < md) */}
+                    <header className="rounded-2xl border border-foreground-muted/15 bg-surface p-4 shadow-(--shadow-ambient-sm) md:hidden">
+                        <p className="m-0 text-xs font-bold tracking-wider text-accent uppercase">
+                            Casa Flora • Sede El Poblado
+                        </p>
+                        <h1 className="m-0 mt-1 font-display text-xl font-bold text-primary">
+                            Panel Operativo de Administración
+                        </h1>
+                        <p className="m-0 mt-1 text-xs text-foreground-muted">
+                            Sesión activa como{" "}
+                            <strong className="text-foreground">
+                                {session.user.name}
+                            </strong>
+                        </p>
+                    </header>
+
+                    {feedbackBanner && (
+                        <div
+                            role={feedbackBanner.type === "error" ? "alert" : "status"}
+                            className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm font-medium ${
+                                feedbackBanner.type === "error"
+                                    ? "border-destructive/35 bg-destructive/10 text-destructive"
+                                    : "border-primary/25 bg-primary/10 text-primary"
+                            }`}
+                        >
+                            <span>{feedbackBanner.message}</span>
+                            <button
+                                type="button"
+                                onClick={() => setFeedbackBanner(null)}
+                                className={`inline-flex cursor-pointer items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold underline ${focusRing}`}
+                            >
+                                <X className="size-3.5 shrink-0" aria-hidden="true" />
+                                <span>Cerrar aviso</span>
+                            </button>
+                        </div>
+                    )}
+
+                    {activeSection === "orders" && (
                 <section
                     aria-label="Gestión de pedidos"
                     className="mt-6 space-y-6"
@@ -1340,9 +1407,10 @@ export default function AdminDashboardPage() {
                                 <button
                                     type="button"
                                     onClick={() => void loadOrders()}
-                                    className={`inline-flex min-h-11 cursor-pointer items-center justify-center rounded-xl border border-accent px-4 py-2 text-xs font-bold text-primary transition hover:bg-background-alt ${focusRing}`}
+                                    className={`inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-accent px-4 py-2 text-xs font-bold text-primary transition hover:bg-background-alt ${focusRing}`}
                                 >
-                                    Actualizar lista
+                                    <Refresh className="size-3.5 shrink-0" aria-hidden="true" />
+                                    <span>Actualizar lista</span>
                                 </button>
                             </div>
                         </div>
@@ -1356,9 +1424,10 @@ export default function AdminDashboardPage() {
                                 <button
                                     type="button"
                                     onClick={() => void loadOrders()}
-                                    className={`cursor-pointer font-bold underline ${focusRing}`}
+                                    className={`inline-flex cursor-pointer items-center gap-1.5 font-bold underline ${focusRing}`}
                                 >
-                                    Reintentar carga
+                                    <Refresh className="size-3.5 shrink-0" aria-hidden="true" />
+                                    <span>Reintentar carga</span>
                                 </button>
                             </div>
                         )}
@@ -1439,11 +1508,7 @@ export default function AdminDashboardPage() {
                                                     <strong className="text-foreground">
                                                         Entrega:
                                                     </strong>{" "}
-                                                    {order.addressLabel} •{" "}
-                                                    <strong className="text-foreground">
-                                                        Pago:
-                                                    </strong>{" "}
-                                                    {order.paymentSummary}
+                                                    {order.addressLabel}
                                                 </p>
                                             </div>
 
@@ -1476,11 +1541,16 @@ export default function AdminDashboardPage() {
                                                                         "delivered",
                                                                     )
                                                                 }
-                                                                className={`inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-60 ${focusRing}`}
+                                                                aria-label="Marcar como hecho"
+                                                                title="Marcar como hecho"
+                                                                className={`group inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-primary px-3 py-2 text-xs font-bold text-primary-foreground shadow-(--shadow-ambient-sm) transition-all duration-300 ease-out hover:px-4 hover:shadow-md disabled:opacity-60 ${focusRing}`}
                                                             >
-                                                                {isBusy
-                                                                    ? "Guardando..."
-                                                                    : "Marcar como hecho"}
+                                                                <Check className="size-4 shrink-0 transition-transform duration-300 group-hover:scale-110" aria-hidden="true" />
+                                                                <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-300 ease-out group-hover:max-w-xs group-hover:opacity-100 group-focus-visible:max-w-xs group-focus-visible:opacity-100">
+                                                                    {isBusy
+                                                                        ? "Guardando..."
+                                                                        : "Marcar como hecho"}
+                                                                </span>
                                                             </button>
                                                         )}
 
@@ -1508,9 +1578,10 @@ export default function AdminDashboardPage() {
                                                                 order,
                                                             )
                                                         }
-                                                        className={`inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full border border-foreground-muted/30 bg-background px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-background-alt ${focusRing}`}
+                                                        className={`inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-foreground-muted/30 bg-background px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-background-alt ${focusRing}`}
                                                     >
-                                                        Consultar datos
+                                                        <Eye className="size-4 shrink-0" aria-hidden="true" />
+                                                        <span>Consultar datos</span>
                                                     </button>
                                                 </div>
                                             </div>
@@ -1851,9 +1922,10 @@ export default function AdminDashboardPage() {
                                 <button
                                     type="button"
                                     onClick={() => void loadBookings()}
-                                    className={`cursor-pointer font-bold underline ${focusRing}`}
+                                    className={`inline-flex cursor-pointer items-center gap-1.5 font-bold underline ${focusRing}`}
                                 >
-                                    Reintentar
+                                    <Refresh className="size-3.5 shrink-0" aria-hidden="true" />
+                                    <span>Reintentar</span>
                                 </button>
                             </div>
                         )}
@@ -1997,9 +2069,10 @@ export default function AdminDashboardPage() {
                                                             booking,
                                                         )
                                                     }
-                                                    className={`inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full border border-foreground-muted/30 bg-background px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-background-alt ${focusRing}`}
+                                                    className={`inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-foreground-muted/30 bg-background px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-background-alt ${focusRing}`}
                                                 >
-                                                    Ver ficha completa
+                                                    <Eye className="size-4 shrink-0" aria-hidden="true" />
+                                                    <span>Ver ficha completa</span>
                                                 </button>
                                             </div>
                                         </li>
@@ -2033,9 +2106,10 @@ export default function AdminDashboardPage() {
                             <button
                                 type="button"
                                 onClick={() => openCreateProductModal()}
-                                className={`inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-(--shadow-ambient-sm) transition hover:opacity-90 ${focusRing}`}
+                                className={`inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-(--shadow-ambient-sm) transition hover:opacity-90 ${focusRing}`}
                             >
-                                + Agregar nuevo plato
+                                <Add className="size-4 shrink-0" aria-hidden="true" />
+                                <span>Agregar nuevo plato</span>
                             </button>
                         </div>
 
@@ -2163,9 +2237,10 @@ export default function AdminDashboardPage() {
                                 <button
                                     type="button"
                                     onClick={() => void loadProducts()}
-                                    className={`cursor-pointer font-bold underline ${focusRing}`}
+                                    className={`inline-flex cursor-pointer items-center gap-1.5 font-bold underline ${focusRing}`}
                                 >
-                                    Reintentar
+                                    <Refresh className="size-3.5 shrink-0" aria-hidden="true" />
+                                    <span>Reintentar</span>
                                 </button>
                             </div>
                         )}
@@ -2316,9 +2391,10 @@ export default function AdminDashboardPage() {
                                                                 product,
                                                             )
                                                         }
-                                                        className={`inline-flex min-h-10 cursor-pointer items-center rounded-full border border-foreground-muted/25 bg-surface px-3 py-1.5 text-xs font-semibold text-foreground-muted transition hover:text-foreground ${focusRing}`}
+                                                        className={`inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full border border-foreground-muted/25 bg-surface px-3 py-1.5 text-xs font-semibold text-foreground-muted transition hover:text-foreground ${focusRing}`}
                                                     >
-                                                        Duplicar
+                                                        <Copy className="size-3.5 shrink-0" aria-hidden="true" />
+                                                        <span>Duplicar</span>
                                                     </button>
                                                     <button
                                                         type="button"
@@ -2327,9 +2403,10 @@ export default function AdminDashboardPage() {
                                                                 product,
                                                             )
                                                         }
-                                                        className={`inline-flex min-h-10 cursor-pointer items-center rounded-full bg-primary px-3.5 py-1.5 text-xs font-bold text-primary-foreground transition hover:opacity-90 ${focusRing}`}
+                                                        className={`inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-xs font-bold text-primary-foreground transition hover:opacity-90 ${focusRing}`}
                                                     >
-                                                        Editar
+                                                        <Edit2 className="size-3.5 shrink-0" aria-hidden="true" />
+                                                        <span>Editar</span>
                                                     </button>
                                                     <button
                                                         type="button"
@@ -2339,9 +2416,10 @@ export default function AdminDashboardPage() {
                                                                 product,
                                                             )
                                                         }
-                                                        className={`inline-flex min-h-10 cursor-pointer items-center rounded-full border border-destructive/35 px-3 py-1.5 text-xs font-semibold text-destructive transition hover:bg-destructive/10 disabled:opacity-60 ${focusRing}`}
+                                                        className={`inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full border border-destructive/35 px-3 py-1.5 text-xs font-semibold text-destructive transition hover:bg-destructive/10 disabled:opacity-60 ${focusRing}`}
                                                     >
-                                                        Eliminar
+                                                        <Trash className="size-3.5 shrink-0" aria-hidden="true" />
+                                                        <span>Eliminar</span>
                                                     </button>
                                                 </div>
                                             </div>
@@ -2353,6 +2431,93 @@ export default function AdminDashboardPage() {
                     </div>
                 </section>
             )}
+                </main>
+            </div>
+
+            {/* Mobile Bottom Navigation (fixed at bottom on < md) */}
+            <nav
+                role="tablist"
+                aria-label="Navegación móvil del panel operativo"
+                className="fixed bottom-0 left-0 right-0 z-40 flex h-16 items-center justify-around border-t border-foreground-muted/15 bg-surface/95 px-2 backdrop-blur-md shadow-(--shadow-ambient-md) md:hidden"
+            >
+                <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeSection === "orders"}
+                    onClick={() => setActiveSection("orders")}
+                    className={`relative flex min-h-11 flex-1 flex-col items-center justify-center gap-1 rounded-xl py-1 text-xs font-bold transition ${focusRing} ${
+                        activeSection === "orders"
+                            ? "text-primary"
+                            : "text-foreground-muted hover:text-foreground"
+                    }`}
+                >
+                    <div className="relative">
+                        <Receipt2 className="size-5 shrink-0" aria-hidden="true" />
+                        <span
+                            className={`absolute -top-1 -right-2.5 rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                                activeSection === "orders"
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-foreground-muted/20 text-foreground"
+                            }`}
+                        >
+                            {orders.length}
+                        </span>
+                    </div>
+                    <span className="text-[11px]">Pedidos</span>
+                </button>
+
+                <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeSection === "bookings"}
+                    onClick={() => setActiveSection("bookings")}
+                    className={`relative flex min-h-11 flex-1 flex-col items-center justify-center gap-1 rounded-xl py-1 text-xs font-bold transition ${focusRing} ${
+                        activeSection === "bookings"
+                            ? "text-primary"
+                            : "text-foreground-muted hover:text-foreground"
+                    }`}
+                >
+                    <div className="relative">
+                        <Calendar className="size-5 shrink-0" aria-hidden="true" />
+                        <span
+                            className={`absolute -top-1 -right-2.5 rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                                activeSection === "bookings"
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-foreground-muted/20 text-foreground"
+                            }`}
+                        >
+                            {bookings.length}
+                        </span>
+                    </div>
+                    <span className="text-[11px]">Reservas</span>
+                </button>
+
+                <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeSection === "products"}
+                    onClick={() => setActiveSection("products")}
+                    className={`relative flex min-h-11 flex-1 flex-col items-center justify-center gap-1 rounded-xl py-1 text-xs font-bold transition ${focusRing} ${
+                        activeSection === "products"
+                            ? "text-primary"
+                            : "text-foreground-muted hover:text-foreground"
+                    }`}
+                >
+                    <div className="relative">
+                        <ForkKnife className="size-5 shrink-0" aria-hidden="true" />
+                        <span
+                            className={`absolute -top-1 -right-2.5 rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                                activeSection === "products"
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-foreground-muted/20 text-foreground"
+                            }`}
+                        >
+                            {products.length}
+                        </span>
+                    </div>
+                    <span className="text-[11px]">Catálogo</span>
+                </button>
+            </nav>
 
             {selectedOrder && (
                 <div
@@ -2382,9 +2547,10 @@ export default function AdminDashboardPage() {
                             <button
                                 type="button"
                                 onClick={() => setSelectedOrder(null)}
-                                className={`min-h-10 cursor-pointer rounded-full border border-foreground-muted/25 px-3.5 py-1.5 text-xs font-bold text-foreground hover:bg-background-alt ${focusRing}`}
+                                className={`inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full border border-foreground-muted/25 px-3.5 py-1.5 text-xs font-bold text-foreground hover:bg-background-alt ${focusRing}`}
                             >
-                                Cerrar (Esc)
+                                <X className="size-4 shrink-0" aria-hidden="true" />
+                                <span>Cerrar (Esc)</span>
                             </button>
                         </div>
 
@@ -2625,9 +2791,10 @@ export default function AdminDashboardPage() {
                                     setSelectedBooking(null);
                                     setBookingEditDraft(null);
                                 }}
-                                className={`min-h-10 cursor-pointer rounded-full border border-foreground-muted/25 px-3.5 py-1.5 text-xs font-bold text-foreground hover:bg-background-alt ${focusRing}`}
+                                className={`inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full border border-foreground-muted/25 px-3.5 py-1.5 text-xs font-bold text-foreground hover:bg-background-alt ${focusRing}`}
                             >
-                                Cerrar (Esc)
+                                <X className="size-4 shrink-0" aria-hidden="true" />
+                                <span>Cerrar (Esc)</span>
                             </button>
                         </div>
 
@@ -2939,11 +3106,14 @@ export default function AdminDashboardPage() {
                                     updatingBookingId === selectedBooking.id
                                 }
                                 onClick={() => void handleSaveBookingDetails()}
-                                className={`inline-flex min-h-11 cursor-pointer items-center rounded-full bg-primary px-6 py-2.5 text-xs font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-60 ${focusRing}`}
+                                className={`inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-primary px-6 py-2.5 text-xs font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-60 ${focusRing}`}
                             >
-                                {updatingBookingId === selectedBooking.id
-                                    ? "Guardando cambios..."
-                                    : "Guardar cambios de reserva"}
+                                <Check className="size-4 shrink-0" aria-hidden="true" />
+                                <span>
+                                    {updatingBookingId === selectedBooking.id
+                                        ? "Guardando cambios..."
+                                        : "Guardar cambios de reserva"}
+                                </span>
                             </button>
                         </div>
                     </div>
@@ -2981,9 +3151,10 @@ export default function AdminDashboardPage() {
                             <button
                                 type="button"
                                 onClick={() => setIsProductModalOpen(false)}
-                                className={`min-h-10 cursor-pointer rounded-full border border-foreground-muted/25 px-3.5 py-1.5 text-xs font-bold text-foreground hover:bg-background-alt ${focusRing}`}
+                                className={`inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full border border-foreground-muted/25 px-3.5 py-1.5 text-xs font-bold text-foreground hover:bg-background-alt ${focusRing}`}
                             >
-                                Cerrar (Esc)
+                                <X className="size-4 shrink-0" aria-hidden="true" />
+                                <span>Cerrar (Esc)</span>
                             </button>
                         </div>
 
@@ -3228,20 +3399,24 @@ export default function AdminDashboardPage() {
                                 <button
                                     type="button"
                                     onClick={() => setIsProductModalOpen(false)}
-                                    className={`inline-flex min-h-11 cursor-pointer items-center rounded-full border border-foreground-muted/30 px-5 py-2 text-xs font-bold text-foreground hover:bg-background-alt ${focusRing}`}
+                                    className={`inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full border border-foreground-muted/30 px-5 py-2 text-xs font-bold text-foreground hover:bg-background-alt ${focusRing}`}
                                 >
-                                    Cancelar
+                                    <X className="size-3.5 shrink-0" aria-hidden="true" />
+                                    <span>Cancelar</span>
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={isSavingProduct}
-                                    className={`inline-flex min-h-11 cursor-pointer items-center rounded-full bg-primary px-6 py-2.5 text-xs font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-60 ${focusRing}`}
+                                    className={`inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full bg-primary px-6 py-2.5 text-xs font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-60 ${focusRing}`}
                                 >
-                                    {isSavingProduct
-                                        ? "Guardando plato..."
-                                        : editingProduct
-                                          ? "Guardar cambios"
-                                          : "Crear plato en la carta"}
+                                    <Check className="size-4 shrink-0" aria-hidden="true" />
+                                    <span>
+                                        {isSavingProduct
+                                            ? "Guardando plato..."
+                                            : editingProduct
+                                              ? "Guardar cambios"
+                                              : "Crear plato en la carta"}
+                                    </span>
                                 </button>
                             </div>
                         </form>
@@ -3281,9 +3456,10 @@ export default function AdminDashboardPage() {
                             <button
                                 type="button"
                                 onClick={() => setProductToDelete(null)}
-                                className={`inline-flex min-h-11 cursor-pointer items-center rounded-full border border-foreground-muted/30 px-4 py-2 text-xs font-bold text-foreground hover:bg-background-alt ${focusRing}`}
+                                className={`inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full border border-foreground-muted/30 px-4 py-2 text-xs font-bold text-foreground hover:bg-background-alt ${focusRing}`}
                             >
-                                Conservar plato
+                                <X className="size-3.5 shrink-0" aria-hidden="true" />
+                                <span>Conservar plato</span>
                             </button>
                             <button
                                 type="button"
@@ -3293,11 +3469,14 @@ export default function AdminDashboardPage() {
                                 onClick={() =>
                                     void handleConfirmDeleteProduct()
                                 }
-                                className={`inline-flex min-h-11 cursor-pointer items-center rounded-full bg-destructive px-5 py-2 text-xs font-bold text-destructive-foreground transition hover:opacity-90 disabled:opacity-60 ${focusRing}`}
+                                className={`inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full bg-destructive px-5 py-2 text-xs font-bold text-destructive-foreground transition hover:opacity-90 disabled:opacity-60 ${focusRing}`}
                             >
-                                {mutatingProductId === productToDelete.id
-                                    ? "Eliminando..."
-                                    : "Sí, eliminar permanentemente"}
+                                <Trash className="size-4 shrink-0" aria-hidden="true" />
+                                <span>
+                                    {mutatingProductId === productToDelete.id
+                                        ? "Eliminando..."
+                                        : "Sí, eliminar permanentemente"}
+                                </span>
                             </button>
                         </div>
                     </div>
