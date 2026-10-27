@@ -531,16 +531,26 @@ export default function CartDrawer() {
                                     </span>
                                 </div>
                                 {activeSession.totalAmount > 0 && (
-                                    <div className="mt-2 flex items-center justify-between gap-2">
-                                        <span className="text-foreground-muted">
-                                            Total:
-                                        </span>
-                                        <span className="font-bold text-foreground">
-                                            {formatPrice(
-                                                activeSession.totalAmount,
-                                            )}
-                                        </span>
-                                    </div>
+                                    <>
+                                        <div className="mt-2 flex items-center justify-between gap-2">
+                                            <span className="text-foreground-muted">
+                                                Total:
+                                            </span>
+                                            <span className="font-bold text-foreground">
+                                                {formatPrice(
+                                                    activeSession.totalAmount,
+                                                )}
+                                            </span>
+                                        </div>
+                                        <div className="mt-2 flex items-center justify-between gap-2">
+                                            <span className="text-foreground-muted">
+                                                Puntos estimados:
+                                            </span>
+                                            <span className="font-bold text-accent">
+                                                +{Math.max(1, Math.floor(activeSession.totalAmount / 10000))} pts
+                                            </span>
+                                        </div>
+                                    </>
                                 )}
                                 <div className="mt-2 flex items-center justify-between gap-2">
                                     <span className="text-foreground-muted">
@@ -748,13 +758,23 @@ export default function CartDrawer() {
                                     </svg>
                                 </span>
                                 <div className="min-w-0 flex-1">
-                                    <p className="m-0 font-display text-base font-bold text-primary">
-                                        Inicia sesión para pagar tu pedido
-                                    </p>
+                                    <div className="flex flex-wrap items-center justify-between gap-1.5">
+                                        <p className="m-0 font-display text-base font-bold text-primary">
+                                            Inicia sesión para pagar tu pedido
+                                        </p>
+                                        {estimatedPoints > 0 && (
+                                            <span className="shrink-0 rounded-full bg-accent/15 px-2.5 py-0.5 text-xs font-bold text-accent">
+                                                +{estimatedPoints}{" "}
+                                                {estimatedPoints === 1
+                                                    ? "pt estimado"
+                                                    : "pts estimados"}
+                                            </span>
+                                        )}
+                                    </div>
                                     <p className="m-0 mt-1 text-xs/5 text-foreground">
-                                        Debes estar registrado e iniciar sesión para
-                                        realizar el pago de tu pedido, acumular
-                                        puntos y acceder a tus direcciones.
+                                        {estimatedPoints > 0
+                                            ? `Esta bolsa acumula +${estimatedPoints} puntos estimados para tu cuenta del Club Casa Flora. Inicia sesión para completar tu compra y guardarlos.`
+                                            : "Debes estar registrado e iniciar sesión para realizar el pago de tu pedido, acumular puntos y acceder a tus direcciones."}
                                     </p>
                                 </div>
                             </div>
@@ -788,9 +808,17 @@ export default function CartDrawer() {
                                         : `Acumula puntos para ${nextRewardName}`}
                                 </p>
                             </div>
-                            <span className="shrink-0 rounded-full bg-[#f5c58b] px-3 py-1 text-xs font-bold text-[#2b1d19]">
-                                {currentPoints} pts
-                            </span>
+                            <div className="flex shrink-0 flex-col items-end gap-0.5">
+                                <span className="rounded-full bg-[#f5c58b] px-3 py-1 text-xs font-bold text-[#2b1d19]">
+                                    +{estimatedPoints}{" "}
+                                    {estimatedPoints === 1
+                                        ? "pt estimado"
+                                        : "pts estimados"}
+                                </span>
+                                <span className="text-[10px] text-white/80">
+                                    Saldo actual: {currentPoints} pts
+                                </span>
+                            </div>
                         </div>
                     )}
 
@@ -871,12 +899,22 @@ export default function CartDrawer() {
                                                         </span>
                                                     </div>
 
-                                                    <p className="m-0 mt-0.5 text-xs text-foreground-muted">
-                                                        {formatPrice(
-                                                            item.product.price,
-                                                        )}{" "}
-                                                        c/u
-                                                    </p>
+                                                    <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                                                        <p className="m-0 text-xs text-foreground-muted">
+                                                            {formatPrice(
+                                                                item.product.price,
+                                                            )}{" "}
+                                                            c/u
+                                                        </p>
+                                                        {Math.floor(lineTotal / 10000) > 0 && (
+                                                            <span className="inline-flex items-center rounded-md bg-accent/12 px-1.5 py-0.5 text-[11px] font-semibold text-accent">
+                                                                +{Math.floor(lineTotal / 10000)}{" "}
+                                                                {Math.floor(lineTotal / 10000) === 1
+                                                                    ? "punto estimado"
+                                                                    : "puntos estimados"}
+                                                            </span>
+                                                        )}
+                                                    </div>
 
                                                     <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                                                         <div
@@ -1336,21 +1374,38 @@ export default function CartDrawer() {
                             </div>
                         )}
 
-                        <div className="flex items-center justify-between text-xs text-foreground-muted">
-                            <span>
-                                {deliveryMethod === "delivery"
-                                    ? "Envío a domicilio"
-                                    : "Recogida en local"}
-                            </span>
-                            <span className="font-semibold text-accent">
-                                +{estimatedPoints}{" "}
-                                {estimatedPoints === 1
-                                    ? "punto estimado"
-                                    : "puntos estimados"}
-                            </span>
+                        <div className="space-y-2 text-xs">
+                            <div className="flex items-center justify-between text-foreground-muted">
+                                <span>Modalidad de entrega</span>
+                                <span className="font-semibold text-foreground">
+                                    {deliveryMethod === "delivery"
+                                        ? "Envío a domicilio (Gratis)"
+                                        : "Recogida en local (Gratis)"}
+                                </span>
+                            </div>
+
+                            <div className="flex items-center justify-between rounded-xl border border-accent/25 bg-accent/10 px-3 py-2 text-foreground">
+                                <span className="flex items-center gap-1.5 font-bold text-accent">
+                                    <svg
+                                        aria-hidden="true"
+                                        viewBox="0 0 20 20"
+                                        fill="currentColor"
+                                        className="size-4"
+                                    >
+                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                    </svg>
+                                    Puntos estimados a ganar
+                                </span>
+                                <span className="font-extrabold text-accent">
+                                    +{estimatedPoints}{" "}
+                                    {estimatedPoints === 1
+                                        ? "punto estimado"
+                                        : "puntos estimados"}
+                                </span>
+                            </div>
                         </div>
 
-                        <div className="mt-1.5 flex items-baseline justify-between">
+                        <div className="mt-2.5 flex items-baseline justify-between border-t border-foreground-muted/15 pt-2.5">
                             <span className="font-display text-lg font-bold text-primary">
                                 Total a pagar
                             </span>
