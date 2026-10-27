@@ -1,3 +1,5 @@
+import { getSessionSnapshot } from "@/features/auth/services/sessionService";
+
 export const API_BASE_URL = (
     process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"
 ).replace(/\/+$/, "");
@@ -38,6 +40,13 @@ export async function apiRequest<T>(
 
     if (init.body !== undefined && !headers.has("Content-Type")) {
         headers.set("Content-Type", "application/json");
+    }
+
+    if (!headers.has("Authorization") && typeof window !== "undefined") {
+        const session = getSessionSnapshot();
+        if (session?.token) {
+            headers.set("Authorization", `Bearer ${session.token}`);
+        }
     }
 
     const response = await fetch(url, {
