@@ -249,6 +249,13 @@ export default function CartDrawer() {
         if (isRedirectingPayment) return;
         setCheckoutError(null);
 
+        if (!isAuthenticated) {
+            setCheckoutError(
+                "Debes iniciar sesión para realizar el pago de tu pedido.",
+            );
+            return;
+        }
+
         const errors = validateCheckoutDraft({
             items,
             deliveryMethod,
@@ -685,34 +692,30 @@ export default function CartDrawer() {
                                 </span>
                                 <div className="min-w-0 flex-1">
                                     <p className="m-0 font-display text-base font-bold text-primary">
-                                        {estimatedPoints > 0
-                                            ? `Suma +${estimatedPoints} ${estimatedPoints === 1 ? "punto" : "puntos"} con tu pedido`
-                                            : "Gana puntos en el Club Casa Flora"}
+                                        Inicia sesión para pagar tu pedido
                                     </p>
                                     <p className="m-0 mt-1 text-xs/5 text-foreground">
-                                        Crea tu cuenta o inicia sesión para
-                                        acumular puntos por cada plato, canjear
-                                        recompensas artesanales, guardar tus
-                                        direcciones y recibir recomendaciones a
-                                        tu medida.
+                                        Debes estar registrado e iniciar sesión para
+                                        realizar el pago de tu pedido, acumular
+                                        puntos y acceder a tus direcciones.
                                     </p>
                                 </div>
                             </div>
 
                             <div className="mt-3.5 grid grid-cols-2 gap-2.5">
                                 <Link
-                                    href="/signup"
+                                    href="/login"
                                     onClick={closeCart}
                                     className={`inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground no-underline transition hover:opacity-90 ${focusRing}`}
                                 >
-                                    Crear cuenta
+                                    Iniciar sesión
                                 </Link>
                                 <Link
-                                    href="/login"
+                                    href="/signup"
                                     onClick={closeCart}
                                     className={`inline-flex min-h-11 items-center justify-center rounded-full border border-primary/40 bg-surface px-4 py-2 text-xs font-bold text-primary no-underline transition hover:bg-background dark:border-foreground-muted/35 dark:text-foreground ${focusRing}`}
                                 >
-                                    Iniciar sesión
+                                    Crear cuenta
                                 </Link>
                             </div>
                         </div>
@@ -1300,35 +1303,64 @@ export default function CartDrawer() {
                         </div>
 
                         <div className="mt-3.5 flex flex-col gap-2">
-                            <button
-                                type="button"
-                                disabled={isRedirectingPayment}
-                                onClick={() => void handleProceedToPayment()}
-                                className={`inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-xs font-bold text-primary-foreground shadow-(--shadow-ambient-sm) transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`}
-                            >
-                                <svg
-                                    aria-hidden="true"
-                                    viewBox="0 0 20 20"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="1.8"
-                                    className="size-4 shrink-0"
+                            {isAuthenticated ? (
+                                <button
+                                    type="button"
+                                    disabled={isRedirectingPayment}
+                                    onClick={() => void handleProceedToPayment()}
+                                    className={`inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-xs font-bold text-primary-foreground shadow-(--shadow-ambient-sm) transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`}
                                 >
-                                    <rect
-                                        x="2.5"
-                                        y="4.5"
-                                        width="15"
-                                        height="11"
-                                        rx="2"
-                                    />
-                                    <path d="M2.5 8.5h15M6 12.5h3" />
-                                </svg>
-                                <span>
-                                    {isRedirectingPayment
-                                        ? "Redirigiendo a Mercado Pago..."
-                                        : "Pagar con Mercado Pago"}
-                                </span>
-                            </button>
+                                    <svg
+                                        aria-hidden="true"
+                                        viewBox="0 0 20 20"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="1.8"
+                                        className="size-4 shrink-0"
+                                    >
+                                        <rect
+                                            x="2.5"
+                                            y="4.5"
+                                            width="15"
+                                            height="11"
+                                            rx="2"
+                                        />
+                                        <path d="M2.5 8.5h15M6 12.5h3" />
+                                    </svg>
+                                    <span>
+                                        {isRedirectingPayment
+                                            ? "Redirigiendo a Mercado Pago..."
+                                            : "Pagar con Mercado Pago"}
+                                    </span>
+                                </button>
+                            ) : (
+                                <div className="flex flex-col gap-2">
+                                    <Link
+                                        href="/login"
+                                        onClick={closeCart}
+                                        className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-xs font-bold text-primary-foreground no-underline shadow-(--shadow-ambient-sm) transition hover:opacity-90 ${focusRing}`}
+                                    >
+                                        <svg
+                                            aria-hidden="true"
+                                            viewBox="0 0 20 20"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="1.8"
+                                            className="size-4 shrink-0"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                d="M10 10a4 4 0 100-8 4 4 0 000 8zm-7 8a7 7 0 0114 0H3z"
+                                            />
+                                        </svg>
+                                        <span>Inicia sesión para pagar</span>
+                                    </Link>
+                                    <p className="m-0 text-center text-[11px] text-foreground-muted">
+                                        Debes tener una sesión activa para realizar el pago de los platos en tu bolsa.
+                                    </p>
+                                </div>
+                            )}
 
                             <button
                                 type="button"
