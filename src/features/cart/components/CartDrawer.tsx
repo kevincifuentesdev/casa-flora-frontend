@@ -24,6 +24,8 @@ import {
 
 type PaymentStage = "idle" | "waiting" | "approved" | "rejected";
 
+const PAYMENT_TIMEOUT_SECONDS = 90;
+
 const focusRing =
     "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary";
 
@@ -45,6 +47,7 @@ export default function CartDrawer() {
         clearCart,
     } = useCart();
     const isAdmin = session?.user?.role === "admin";
+    const isAuthenticated = Boolean(session?.user);
 
     const [deliveryMethod, setDeliveryMethod] =
         useState<DeliveryMethod>("pickup");
@@ -77,6 +80,9 @@ export default function CartDrawer() {
     const [isCheckingPayment, setIsCheckingPayment] = useState(false);
     const [verificationNotice, setVerificationNotice] = useState<string | null>(
         null,
+    );
+    const [remainingSeconds, setRemainingSeconds] = useState(
+        PAYMENT_TIMEOUT_SECONDS,
     );
 
     const runPaymentVerification = useCallback(
@@ -164,6 +170,7 @@ export default function CartDrawer() {
                     order: null,
                 },
             );
+            setRemainingSeconds(PAYMENT_TIMEOUT_SECONDS);
             setPaymentStage("waiting");
             void runPaymentVerification(ref, paymentId, true);
         });
@@ -195,6 +202,43 @@ export default function CartDrawer() {
     }, [isOpen, paymentStage, activeSession?.externalReference, runPaymentVerification]);
 
     useEffect(() => {
+        if (!isOpen || paymentStage !== "waiting") {
+            return;
+        }
+
+        const timer = window.setInterval(() => {
+            setRemainingSeconds((prev) => {
+                if (prev <= 1) {
+                    window.clearInterval(timer);
+                    if (activeSession?.order?.id) {
+                        void cancelPendingCartOrder(activeSession.order.id);
+                    }
+                    setPaymentStage("rejected");
+                    setVerifiedSummary(
+                        "Cancelado automáticamente tras 90 segundos sin verificación de pago",
+                    );
+                    setVerificationNotice(
+                        "El tiempo límite de 90 segundos para verificar el pago ha expirado. El pedido fue cancelado y no se realizó ningún cargo.",
+                    );
+                    if (isAuthenticated) {
+                        void refreshSession();
+                    }
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => window.clearInterval(timer);
+    }, [
+        isOpen,
+        paymentStage,
+        activeSession?.order?.id,
+        isAuthenticated,
+        refreshSession,
+    ]);
+
+    useEffect(() => {
         if (!isOpen) {
             return;
         }
@@ -219,7 +263,6 @@ export default function CartDrawer() {
         return null;
     }
 
-    const isAuthenticated = Boolean(session?.user);
     const savedAddresses = session?.user?.addresses ?? [];
     const defaultSavedAddress =
         savedAddresses.find((a) => a.isDefault) ?? savedAddresses[0] ?? null;
@@ -319,6 +362,7 @@ export default function CartDrawer() {
         setActiveSession(result.session);
         setVerifiedOrder(result.session.order);
         setVerificationNotice(null);
+        setRemainingSeconds(PAYMENT_TIMEOUT_SECONDS);
         setPaymentStage("waiting");
 
         if (isAuthenticated) {
@@ -336,12 +380,14 @@ export default function CartDrawer() {
         setPaymentStage("idle");
         setActiveSession(null);
         setVerificationNotice(null);
+        setRemainingSeconds(PAYMENT_TIMEOUT_SECONDS);
     };
 
     const handleResetAndClose = () => {
         setPaymentStage("idle");
         setActiveSession(null);
         setVerificationNotice(null);
+        setRemainingSeconds(PAYMENT_TIMEOUT_SECONDS);
         closeCart();
     };
 
@@ -504,6 +550,17 @@ export default function CartDrawer() {
                                         {activeSession.addressLabel}
                                     </span>
                                 </div>
+                            </div>
+
+                            <div className="mt-3 flex w-full items-center justify-between rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2 text-xs text-amber-900 dark:text-amber-200">
+                                <span className="font-medium">
+                                    Tiempo para verificar:
+                                </span>
+                                <span className="font-mono text-xs font-bold text-amber-800 dark:text-amber-300">
+                                    {Math.floor(remainingSeconds / 60)}:
+                                    {String(remainingSeconds % 60).padStart(2, "0")}{" "}
+                                    ({remainingSeconds}s)
+                                </span>
                             </div>
 
                             {verificationNotice && (
