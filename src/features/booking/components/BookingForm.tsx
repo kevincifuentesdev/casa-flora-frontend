@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight } from "reicon-react";
 
 import Button from "@/features/common/components/Button";
+import { useSession } from "@/features/auth/hooks/useSession";
 import { useBookingForm } from "../hooks/useBookingForm";
 import Calendar from "./Calendar";
 import DinersCounter from "./DinersCounter";
@@ -14,6 +15,8 @@ const textureImage =
     "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E\")";
 
 export default function BookingForm() {
+    const { session } = useSession();
+    const isAdmin = session?.user?.role === "admin";
     const {
         submit,
         isSubmitting,
@@ -22,6 +25,34 @@ export default function BookingForm() {
         confirmedBooking,
         resetBookingForm,
     } = useBookingForm();
+
+    if (isAdmin) {
+        return (
+            <div
+                className="relative rounded-xl bg-surface p-6 shadow-(--shadow-ambient-md) transition-colors duration-400 md:p-8 lg:p-10 text-center"
+                style={{ backgroundImage: textureImage }}
+            >
+                <div className="flex flex-col items-center gap-4 py-8">
+                    <span className="rounded-full bg-primary/10 px-4 py-1 font-body text-xs font-bold text-primary">
+                        Cuenta de Administrador
+                    </span>
+                    <h3 className="m-0 font-display text-2xl text-primary">
+                        Gestión de Reservas
+                    </h3>
+                    <p className="m-0 max-w-md font-body text-sm leading-relaxed text-foreground-muted">
+                        Las cuentas con rol de administrador no pueden crear reservas de comensales. Toda la gestión, ocupación y control de mesas se realiza desde el panel de control.
+                    </p>
+                    <Link
+                        href="/admin"
+                        className="mt-2 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-body text-sm font-bold text-primary-foreground shadow-md transition hover:opacity-90 no-underline"
+                    >
+                        <span>Ir al Panel de Administración</span>
+                        <ArrowRight className="size-4" />
+                    </Link>
+                </div>
+            </div>
+        );
+    }
 
     if (confirmedBooking) {
         return (

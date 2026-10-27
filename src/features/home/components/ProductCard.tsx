@@ -1,8 +1,10 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { CartLarge5 } from "reicon-react";
 
+import { useSession } from "@/features/auth/hooks/useSession";
 import { useCart } from "@/features/cart/hooks/useCart";
 import Button from "@/features/common/components/Button";
 import type { Product } from "@/features/products/domain/product";
@@ -12,6 +14,8 @@ const focusRing =
     "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary";
 
 export default function ProductCard({ product }: { product: Product }) {
+    const { session } = useSession();
+    const isAdmin = session?.user?.role === "admin";
     const { addItem, decrementItem, getItemQuantity, openCart } = useCart();
     const quantityInCart = getItemQuantity(product.id);
 
@@ -46,7 +50,14 @@ export default function ProductCard({ product }: { product: Product }) {
                         {formatPrice(product.price)}
                     </span>
 
-                    {quantityInCart > 0 ? (
+                    {isAdmin ? (
+                        <Link
+                            href="/admin"
+                            className="inline-flex items-center rounded-full bg-surface-alt px-3 py-1.5 font-body text-xs font-semibold text-primary no-underline transition hover:bg-primary hover:text-primary-foreground"
+                        >
+                            Gestionar producto
+                        </Link>
+                    ) : quantityInCart > 0 ? (
                         <div
                             role="group"
                             aria-label={`Cantidad de ${product.name} en tu bolsa`}

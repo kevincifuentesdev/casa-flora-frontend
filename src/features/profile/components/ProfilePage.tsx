@@ -28,6 +28,10 @@ import {
     fetchMyBookings,
 } from "@/features/booking/services/bookingService";
 import { useCart } from "@/features/cart/hooks/useCart";
+import {
+    cancelPendingCartOrder,
+    verifyCartCheckoutPayment,
+} from "@/features/cart/services/checkoutService";
 import { ApiClientError } from "@/features/common/services/apiClient";
 import { formatPrice, type Product } from "@/features/products/domain/product";
 
@@ -133,6 +137,15 @@ export function ProfilePage() {
     const [isLoadingBookings, setIsLoadingBookings] = useState(true);
     const [bookingsError, setBookingsError] = useState<string | null>(null);
     const [cancellingId, setCancellingId] = useState<string | null>(null);
+    const [verifyingOrderId, setVerifyingOrderId] = useState<string | null>(
+        null,
+    );
+    const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(
+        null,
+    );
+    const [orderActionMessage, setOrderActionMessage] = useState<string | null>(
+        null,
+    );
 
     const draft: ProfileFormDraft = {
         firstName: overrides.firstName ?? session?.user?.firstName ?? "",
@@ -192,7 +205,8 @@ export function ProfilePage() {
     }, [activeModal, closeModal]);
 
     const loadBookings = useCallback(async () => {
-        if (!session?.user) {
+        const currentUser = session?.user;
+        if (!currentUser || currentUser.role === "admin") {
             setBookings([]);
             setIsLoadingBookings(false);
             return;
@@ -222,7 +236,7 @@ export function ProfilePage() {
 
         let cancelled = false;
 
-        if (!session?.user) {
+        if (!session?.user || session.user.role === "admin") {
             Promise.resolve().then(() => {
                 if (!cancelled) {
                     setBookings([]);
@@ -438,6 +452,54 @@ export function ProfilePage() {
         router.push("/");
     };
 
+    const handleVerifyPendingOrder = async (orderId: string) => {
+        setVerifyingOrderId(orderId);
+        setOrderActionMessage(null);
+        const res = await verifyCartCheckoutPayment({
+            externalReference: orderId,
+        });
+        setVerifyingOrderId(null);
+
+        if (res.error || !res.verification) {
+            setOrderActionMessage(
+                res.error ??
+                    "No se pudo verificar el estado en Mercado Pago en este momento.",
+            );
+            return;
+        }
+
+        await refreshSession();
+
+        if (res.verification.status === "approved") {
+            setOrderActionMessage(
+                "¡Pago verificado y aprobado! Tus puntos han sido acreditados.",
+            );
+        } else if (res.verification.status === "rejected") {
+            setOrderActionMessage(
+                "El pago fue reportado como rechazado o cancelado por Mercado Pago.",
+            );
+        } else {
+            setOrderActionMessage(
+                "Mercado Pago aún reporta este pedido como pendiente de pago.",
+            );
+        }
+    };
+
+    const handleCancelPendingOrder = async (orderId: string) => {
+        setCancellingOrderId(orderId);
+        setOrderActionMessage(null);
+        const res = await cancelPendingCartOrder(orderId);
+        setCancellingOrderId(null);
+
+        if (res.error) {
+            setOrderActionMessage(res.error);
+            return;
+        }
+
+        await refreshSession();
+        setOrderActionMessage("El pedido pendiente ha sido cancelado.");
+    };
+
     const handleAddFeaturedToCart = (dish: {
         productId: string;
         name: string;
@@ -511,7 +573,13 @@ export function ProfilePage() {
         addresses.find((a) => a.isDefault) ?? addresses[0] ?? null;
     const defaultPayment =
         paymentMethods.find((p) => p.isDefault) ?? paymentMethods[0] ?? null;
-    const latestOrder = orders[0] ?? null;
+    const confirmedOrders = orders.filter(
+        (o) => o.status === "preparing" || o.status === "delivered",
+    );
+    const pendingOrdersCount = orders.filter(
+        (o) => o.status === "pending",
+    ).length;
+    const latestOrder = confirmedOrders[0] ?? null;
     const latestOrderItem = latestOrder?.items[0] ?? null;
     const recommendedProduct = user.recommendedProduct;
 
@@ -526,7 +594,7 @@ export function ProfilePage() {
               statusLabel:
                   latestOrder.status === "delivered"
                       ? "Entregado"
-                      : "En preparación",
+                      : "Pago aprobado • En preparación",
               subtitle: formatRelativeOrderDate(latestOrder.createdAt),
               addressLabel: latestOrder.addressLabel,
               badgeLabel: "ÚLTIMO PEDIDO",
@@ -573,11 +641,13 @@ export function ProfilePage() {
         : "Sin configurar";
 
     const ordersSubtitle =
-        orders.length > 0
-            ? `${orders.length} ${orders.length === 1 ? "orden" : "órdenes"}`
-            : confirmedBookingsCount > 0
-              ? `${confirmedBookingsCount} ${confirmedBookingsCount === 1 ? "reserva" : "reservas"}`
-              : "Sin pedidos";
+        pendingOrdersCount > 0
+            ? `${pendingOrdersCount} pendiente${pendingOrdersCount === 1 ? "" : "s"} de pago`
+            : confirmedOrders.length > 0
+              ? `${confirmedOrders.length} ${confirmedOrders.length === 1 ? "orden pagada" : "órdenes pagadas"}`
+              : confirmedBookingsCount > 0
+                ? `${confirmedBookingsCount} ${confirmedBookingsCount === 1 ? "reserva" : "reservas"}`
+                : "Sin pedidos";
 
     const preferencesSubtitle =
         user.preferences.dietPreference === "trees"
@@ -588,9 +658,100 @@ export function ProfilePage() {
                 ? "Carta equilibrada"
                 : "Personalizar gustos";
 
+    const isAdmin = user.role === "admin";
+
     return (
         <div className="mx-auto w-full max-w-(--container-max) px-(--spacing-margin-mobile) py-5 pb-28 md:px-(--spacing-margin-desktop) md:py-10 md:pb-16">
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 lg:gap-6">
+            {isAdmin ? (
+                <div className="mx-auto max-w-md">
+                    <div className="flex flex-col gap-4 rounded-2xl border border-foreground-muted/12 bg-surface p-5 shadow-(--shadow-ambient-md) sm:p-7">
+                        <div className="flex min-w-0 items-center gap-3.5">
+                            <div className="relative flex size-16 shrink-0 items-center justify-center rounded-full border-2 border-[#e5b8ad] bg-[#fbf7f2] p-1.5 shadow-xs">
+                                <Image
+                                    src="/img/temp_logo.png"
+                                    alt="Emblema de Casa Flora"
+                                    width={96}
+                                    height={96}
+                                    className="size-full rounded-full object-contain"
+                                />
+                            </div>
+
+                            <div className="min-w-0">
+                                <p className="m-0 text-[10px] font-bold tracking-[0.12em] text-[#ad5d4e] uppercase">
+                                    BIENVENIDO A CASA
+                                </p>
+                                <h1 className="m-0 truncate font-display text-2xl leading-tight font-bold text-primary">
+                                    ¡Hola, {displayName}!
+                                </h1>
+                                <p className="m-0 mt-0.5 truncate text-xs text-foreground-muted">
+                                    Sabor de hogar, siempre contigo.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-2.5">
+                            <Link
+                                href="/admin"
+                                className={`inline-flex min-h-11 w-full items-center justify-center rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground no-underline transition hover:opacity-90 ${focusRing}`}
+                            >
+                                Panel de Administración
+                            </Link>
+
+                            <div className="grid grid-cols-2 gap-2.5">
+                                <button
+                                    type="button"
+                                    onClick={() => openModal("edit-profile")}
+                                    aria-haspopup="dialog"
+                                    className={`inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-[#ad5d4e] bg-transparent px-4 py-2 text-xs font-semibold text-primary transition hover:bg-[#eed5ce]/35 dark:border-[#e5b8ad] dark:text-foreground ${focusRing}`}
+                                >
+                                    <svg
+                                        aria-hidden="true"
+                                        viewBox="0 0 20 20"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="1.8"
+                                        className="size-3.5 shrink-0"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M13.586 3.586a2 2 0 112.828 2.828l-8.793 8.793-3.536.707.707-3.536 8.794-8.792z"
+                                        />
+                                    </svg>
+                                    <span>Editar Perfil</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    disabled={isLoggingOut}
+                                    onClick={() => void handleSignOut()}
+                                    className={`inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-destructive/35 bg-destructive/6 px-4 py-2 text-xs font-semibold text-destructive transition hover:bg-destructive/14 disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`}
+                                >
+                                    <svg
+                                        aria-hidden="true"
+                                        viewBox="0 0 20 20"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="1.8"
+                                        className="size-3.5 shrink-0"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M13 4h3a1 1 0 011 1v10a1 1 0 01-1 1h-3M9 13l-3-3m0 0l3-3m-3 3h9"
+                                        />
+                                    </svg>
+                                    <span>
+                                        {isLoggingOut ? "Saliendo..." : "Cerrar sesión"}
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <>
+                    <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 lg:gap-6">
                 <div className="flex flex-col justify-between gap-4 rounded-2xl border border-foreground-muted/12 bg-surface p-5 shadow-(--shadow-ambient-md) sm:flex-row sm:items-center lg:col-span-4 lg:flex-col lg:justify-center lg:p-7 lg:text-center">
                     <div className="flex min-w-0 items-center gap-3.5 lg:flex-col lg:gap-0">
                         <div className="relative flex size-16 shrink-0 items-center justify-center rounded-full border-2 border-[#e5b8ad] bg-[#fbf7f2] p-1.5 shadow-xs lg:size-24 lg:p-2">
@@ -618,7 +779,15 @@ export function ProfilePage() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2.5 sm:flex sm:shrink-0 sm:items-center lg:mt-5 lg:w-full lg:justify-center">
+                    <div className="grid grid-cols-2 gap-2.5 sm:flex sm:shrink-0 sm:flex-wrap sm:items-center lg:mt-5 lg:w-full lg:justify-center">
+                        {user.role === "admin" && (
+                            <Link
+                                href="/admin"
+                                className={`col-span-2 inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground no-underline transition hover:opacity-90 ${focusRing}`}
+                            >
+                                Panel de Administración
+                            </Link>
+                        )}
                         <button
                             type="button"
                             onClick={() => openModal("edit-profile")}
@@ -682,53 +851,78 @@ export function ProfilePage() {
                     <div className="relative z-10 flex items-start justify-between gap-3">
                         <div className="min-w-0">
                             <p className="m-0 text-[11px] font-bold tracking-[0.14em] text-[#e8b98a] uppercase">
-                                FIDELIZACIÓN
+                                {user.role === "admin"
+                                    ? "PANEL DE CONTROL"
+                                    : "FIDELIZACIÓN"}
                             </p>
 
                             <h2 className="m-0 mt-2 font-display text-2xl font-bold text-white sm:text-3xl">
-                                Tu Próxima Recompensa
+                                {user.role === "admin"
+                                    ? "Rol Administrador"
+                                    : "Tu Próxima Recompensa"}
                             </h2>
 
                             <p className="m-0 mt-1 text-xs text-white/85 sm:text-sm">
-                                {loyalty.rewardName} (Faltan{" "}
-                                {loyalty.pointsRemaining} pts)
+                                {user.role === "admin"
+                                    ? "Gestiona pedidos, reservas y productos desde el panel administrativo."
+                                    : `${loyalty.rewardName} (Faltan ${loyalty.pointsRemaining} pts)`}
                             </p>
                         </div>
 
-                        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#f5c58b] px-3.5 py-1.5 text-xs font-bold text-[#2b1d19] shadow-xs">
-                            <svg
-                                aria-hidden="true"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
-                                className="size-3.5 text-[#4b030f]"
+                        {user.role === "admin" ? (
+                            <Link
+                                href="/admin"
+                                className="inline-flex shrink-0 items-center rounded-full bg-[#f5c58b] px-4 py-1.5 text-xs font-bold text-[#2b1d19] no-underline shadow-xs hover:bg-white transition"
                             >
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                            </svg>
-                            {loyalty.points} pts
-                        </span>
+                                Dashboard
+                            </Link>
+                        ) : (
+                            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#f5c58b] px-3.5 py-1.5 text-xs font-bold text-[#2b1d19] shadow-xs">
+                                <svg
+                                    aria-hidden="true"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                    className="size-3.5 text-[#4b030f]"
+                                >
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                                {loyalty.points} pts
+                            </span>
+                        )}
                     </div>
 
-                    <div className="relative z-10 mt-6 sm:mt-8">
-                        <div
-                            role="progressbar"
-                            aria-label="Progreso de fidelización"
-                            aria-valuenow={loyalty.pointsInCurrentCycle}
-                            aria-valuemin={0}
-                            aria-valuemax={loyalty.nextRewardGoal}
-                            className="h-2.5 w-full overflow-hidden rounded-full bg-[#31040b]"
-                        >
+                    {user.role === "admin" ? (
+                        <div className="relative z-10 mt-6 sm:mt-8">
+                            <Link
+                                href="/admin"
+                                className="inline-flex min-h-11 items-center justify-center rounded-full bg-[#f5c58b] px-6 py-2.5 text-xs font-bold text-[#2b1d19] no-underline shadow-md transition hover:bg-white"
+                            >
+                                Ir al Panel de Administración
+                            </Link>
+                        </div>
+                    ) : (
+                        <div className="relative z-10 mt-6 sm:mt-8">
                             <div
-                                className="h-full rounded-full bg-[#f5c58b] transition-all duration-500"
-                                style={{
-                                    width: `${Math.max(6, loyalty.progressPercent)}%`,
-                                }}
-                            />
+                                role="progressbar"
+                                aria-label="Progreso de fidelización"
+                                aria-valuenow={loyalty.pointsInCurrentCycle}
+                                aria-valuemin={0}
+                                aria-valuemax={loyalty.nextRewardGoal}
+                                className="h-2.5 w-full overflow-hidden rounded-full bg-[#31040b]"
+                            >
+                                <div
+                                    className="h-full rounded-full bg-[#f5c58b] transition-all duration-500"
+                                    style={{
+                                        width: `${Math.max(6, loyalty.progressPercent)}%`,
+                                    }}
+                                />
+                            </div>
+                            <div className="mt-2 flex items-center justify-between text-xs font-semibold text-[#e8b98a]">
+                                <span>0 pts</span>
+                                <span>{loyalty.nextRewardGoal} pts</span>
+                            </div>
                         </div>
-                        <div className="mt-2 flex items-center justify-between text-xs font-semibold text-[#e8b98a]">
-                            <span>0 pts</span>
-                            <span>{loyalty.nextRewardGoal} pts</span>
-                        </div>
-                    </div>
+                    )}
                 </div>
             </div>
 
@@ -1057,6 +1251,8 @@ export function ProfilePage() {
                     COCINA VIRTUAL NACIDA EN MEDELLÍN
                 </p>
             </aside>
+                </>
+            )}
 
             {activeModal !== null && (
                 <div
@@ -1071,6 +1267,10 @@ export function ProfilePage() {
                     }}
                 >
                     <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl border border-foreground-muted/15 bg-surface p-5 pb-7 shadow-(--shadow-ambient-md) sm:max-h-[88dvh] sm:max-w-xl sm:rounded-2xl sm:p-7">
+                        <div
+                            className="mx-auto mb-3 h-1.5 w-12 shrink-0 rounded-full bg-foreground-muted/25 sm:hidden"
+                            aria-hidden="true"
+                        />
                         <div className="mb-4 flex items-start justify-between gap-3 border-b border-foreground-muted/15 pb-3.5">
                             <div className="min-w-0">
                                 <h2
@@ -1676,24 +1876,43 @@ export function ProfilePage() {
                         {activeModal === "orders" && (
                             <div>
                                 <div className="mb-4 flex flex-wrap items-center gap-2.5">
-                                    <Link
-                                        href="/menu"
-                                        className={`inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground no-underline transition hover:opacity-90 ${focusRing}`}
-                                    >
-                                        Pedir en el menú
-                                    </Link>
-                                    <Link
-                                        href="/booking"
-                                        className={`inline-flex min-h-11 items-center justify-center rounded-full border border-accent px-5 py-2 text-xs font-semibold text-primary no-underline transition hover:bg-background-alt ${focusRing}`}
-                                    >
-                                        Nueva reserva
-                                    </Link>
+                                    {user.role === "admin" ? (
+                                        <Link
+                                            href="/admin"
+                                            className={`inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground no-underline transition hover:opacity-90 ${focusRing}`}
+                                        >
+                                            Ir al Panel de Administración
+                                        </Link>
+                                    ) : (
+                                        <>
+                                            <Link
+                                                href="/menu"
+                                                className={`inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground no-underline transition hover:opacity-90 ${focusRing}`}
+                                            >
+                                                Pedir en el menú
+                                            </Link>
+                                            <Link
+                                                href="/booking"
+                                                className={`inline-flex min-h-11 items-center justify-center rounded-full border border-accent px-5 py-2 text-xs font-semibold text-primary no-underline transition hover:bg-background-alt ${focusRing}`}
+                                            >
+                                                Nueva reserva
+                                            </Link>
+                                        </>
+                                    )}
                                 </div>
 
                                 <div>
                                     <h3 className="m-0 font-display text-base font-bold text-primary">
                                         Pedidos realizados ({orders.length})
                                     </h3>
+                                    {orderActionMessage && (
+                                        <p
+                                            role="status"
+                                            className="mt-2.5 rounded-lg border border-accent/35 bg-accent/10 px-3.5 py-2 text-xs font-medium text-primary"
+                                        >
+                                            {orderActionMessage}
+                                        </p>
+                                    )}
                                     {orders.length === 0 ? (
                                         <p className="mt-2 rounded-xl border border-foreground-muted/15 bg-background p-4 text-xs text-foreground-muted">
                                             Aún no has realizado pedidos. Compra
@@ -1702,49 +1921,150 @@ export function ProfilePage() {
                                         </p>
                                     ) : (
                                         <ul className="m-0 mt-2.5 list-none divide-y divide-foreground-muted/15 p-0">
-                                            {orders.map((order) => (
-                                                <li
-                                                    key={order.id}
-                                                    className="flex flex-wrap items-center justify-between gap-3 py-3"
-                                                >
-                                                    <div>
-                                                        <p className="m-0 font-display text-sm font-bold text-primary">
-                                                            Orden #
-                                                            {order.orderNumber}:{" "}
-                                                            {order.items
-                                                                .map(
-                                                                    (i) =>
-                                                                        `${i.quantity}x ${i.productName}`,
+                                            {orders.map((order) => {
+                                                const isConfirmed =
+                                                    order.status ===
+                                                        "preparing" ||
+                                                    order.status ===
+                                                        "delivered";
+                                                const isPending =
+                                                    order.status === "pending";
+                                                const statusLabel =
+                                                    order.status === "preparing"
+                                                        ? "Pago aprobado • En preparación"
+                                                        : order.status ===
+                                                            "delivered"
+                                                          ? "Entregado"
+                                                          : order.status ===
+                                                              "pending"
+                                                            ? "Pendiente de pago"
+                                                            : "Cancelado";
+                                                const statusBadgeClass =
+                                                    isConfirmed
+                                                        ? "border-primary/25 bg-primary/10 text-primary"
+                                                        : isPending
+                                                          ? "border-accent/40 bg-accent/15 text-primary"
+                                                          : "border-destructive/30 bg-destructive/10 text-destructive";
+
+                                                return (
+                                                    <li
+                                                        key={order.id}
+                                                        className="flex flex-wrap items-start justify-between gap-3 py-3.5"
+                                                    >
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <p className="m-0 font-display text-sm font-bold text-primary">
+                                                                    Orden #
+                                                                    {
+                                                                        order.orderNumber
+                                                                    }
+                                                                    :{" "}
+                                                                    {order.items
+                                                                        .map(
+                                                                            (
+                                                                                i,
+                                                                            ) =>
+                                                                                `${i.quantity}x ${i.productName}`,
+                                                                        )
+                                                                        .join(
+                                                                            ", ",
+                                                                        )}
+                                                                </p>
+                                                                <span
+                                                                    className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${statusBadgeClass}`}
+                                                                >
+                                                                    {
+                                                                        statusLabel
+                                                                    }
+                                                                </span>
+                                                            </div>
+                                                            <p className="m-0 mt-1 text-xs text-foreground-muted">
+                                                                {
+                                                                    order.addressLabel
+                                                                }{" "}
+                                                                (
+                                                                {
+                                                                    order.paymentSummary
+                                                                }
                                                                 )
-                                                                .join(", ")}
-                                                        </p>
-                                                        <p className="m-0 mt-0.5 text-xs text-foreground-muted">
-                                                            {
-                                                                order.addressLabel
-                                                            }{" "}
-                                                            (
-                                                            {
-                                                                order.paymentSummary
-                                                            }
-                                                            )
-                                                        </p>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <span className="block text-sm font-bold text-foreground">
-                                                            {formatPrice(
-                                                                order.totalAmount,
+                                                            </p>
+                                                            {isPending && (
+                                                                <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                                                                    <button
+                                                                        type="button"
+                                                                        disabled={
+                                                                            verifyingOrderId ===
+                                                                                order.id ||
+                                                                            cancellingOrderId ===
+                                                                                order.id
+                                                                        }
+                                                                        onClick={() => {
+                                                                            void handleVerifyPendingOrder(
+                                                                                order.id,
+                                                                            );
+                                                                        }}
+                                                                        className={`inline-flex items-center rounded-full bg-primary px-3.5 py-1.5 text-xs font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-60 ${focusRing}`}
+                                                                    >
+                                                                        {verifyingOrderId ===
+                                                                        order.id
+                                                                            ? "Verificando con Mercado Pago..."
+                                                                            : "Verificar pago"}
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        disabled={
+                                                                            verifyingOrderId ===
+                                                                                order.id ||
+                                                                            cancellingOrderId ===
+                                                                                order.id
+                                                                        }
+                                                                        onClick={() => {
+                                                                            void handleCancelPendingOrder(
+                                                                                order.id,
+                                                                            );
+                                                                        }}
+                                                                        className={`inline-flex items-center rounded-full border border-foreground-muted/30 px-3.5 py-1.5 text-xs font-semibold text-foreground-muted transition hover:text-destructive disabled:opacity-60 ${focusRing}`}
+                                                                    >
+                                                                        {cancellingOrderId ===
+                                                                        order.id
+                                                                            ? "Cancelando..."
+                                                                            : "Cancelar"}
+                                                                    </button>
+                                                                </div>
                                                             )}
-                                                        </span>
-                                                        <span className="text-xs font-semibold text-accent">
-                                                            +
-                                                            {
-                                                                order.pointsEarned
-                                                            }{" "}
-                                                            pts
-                                                        </span>
-                                                    </div>
-                                                </li>
-                                            ))}
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <span className="block text-sm font-bold text-foreground">
+                                                                {formatPrice(
+                                                                    order.totalAmount,
+                                                                )}
+                                                            </span>
+                                                            {isConfirmed ? (
+                                                                <span className="text-xs font-semibold text-accent">
+                                                                    +
+                                                                    {
+                                                                        order.pointsEarned
+                                                                    }{" "}
+                                                                    pts acreditados
+                                                                </span>
+                                                            ) : isPending ? (
+                                                                <span className="text-xs font-medium text-foreground-muted">
+                                                                    +
+                                                                    {
+                                                                        order.pointsEarned
+                                                                    }{" "}
+                                                                    pts al
+                                                                    confirmar
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-xs font-medium text-foreground-muted">
+                                                                    0 pts
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </li>
+                                                );
+                                            })}
                                         </ul>
                                     )}
                                 </div>

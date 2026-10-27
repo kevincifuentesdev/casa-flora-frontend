@@ -22,12 +22,23 @@ export interface CreateCheckoutPayload {
 
 export interface CheckoutSessionData {
     preferenceId: string;
+    externalReference: string;
     checkoutUrl: string;
     sandboxCheckoutUrl: string;
     deliveryMethod: DeliveryMethod;
     addressLabel: string;
     totalAmount: number;
     pointsEarned: number;
+    order: OrderRecord | null;
+}
+
+export type PaymentVerificationStatus = "approved" | "pending" | "rejected";
+
+export interface CheckoutVerificationData {
+    externalReference: string;
+    status: PaymentVerificationStatus;
+    paymentId: string | null;
+    paymentSummary: string;
     order: OrderRecord | null;
 }
 
@@ -57,6 +68,50 @@ export async function createCartCheckout(
         }
         return {
             error: "No fue posible iniciar el pago con Mercado Pago. Intenta nuevamente.",
+        };
+    }
+}
+
+export async function verifyCartCheckoutPayment(payload: {
+    externalReference: string;
+    paymentId?: string;
+}): Promise<{ verification?: CheckoutVerificationData; error?: string }> {
+    try {
+        const response = await apiRequest<{ data: CheckoutVerificationData }>(
+            "/api/orders/checkout/verify",
+            {
+                method: "POST",
+                body: JSON.stringify(payload),
+            },
+        );
+        return { verification: response.data };
+    } catch (error) {
+        if (error instanceof ApiClientError) {
+            return { error: error.message };
+        }
+        return {
+            error: "No fue posible verificar el estado del pago con Mercado Pago.",
+        };
+    }
+}
+
+export async function cancelPendingCartOrder(
+    orderId: string,
+): Promise<{ order?: OrderRecord | null; error?: string }> {
+    try {
+        const response = await apiRequest<{ data: OrderRecord | null }>(
+            `/api/orders/${encodeURIComponent(orderId)}/cancel`,
+            {
+                method: "PATCH",
+            },
+        );
+        return { order: response.data };
+    } catch (error) {
+        if (error instanceof ApiClientError) {
+            return { error: error.message };
+        }
+        return {
+            error: "No fue posible cancelar el pedido pendiente.",
         };
     }
 }

@@ -39,6 +39,26 @@ export interface SlotAvailability {
     available: boolean;
 }
 
+export type BookingStatus =
+    | "confirmed"
+    | "seated"
+    | "completed"
+    | "no_show"
+    | "cancelled";
+
+export interface BookingCustomerSummary {
+    id: string;
+    name: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    username: string | null;
+    points: number;
+    dietPreference: string | null;
+    spiceTolerance: string | null;
+    favoriteMoment: string | null;
+}
+
 export interface BookingRecord {
     id: string;
     userId: string;
@@ -46,7 +66,8 @@ export interface BookingRecord {
     date: string;
     time: string;
     diners: number;
-    status: "confirmed" | "cancelled";
+    status: BookingStatus;
+    customer?: BookingCustomerSummary;
     createdAt: string;
     updatedAt: string;
 }

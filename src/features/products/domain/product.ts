@@ -5,6 +5,10 @@ export interface Product {
     categories: string[];
     description: string;
     imageUrl: string;
+    available?: boolean;
+    sortOrder?: number;
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export function formatPrice(price: number): string {

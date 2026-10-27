@@ -6,6 +6,7 @@ import { startTransition, useEffect, useState } from "react";
 
 import { Moon, CartLarge5 } from "reicon-react";
 import SessionActions from "@/features/auth/components/SessionActions";
+import { useSession } from "@/features/auth/hooks/useSession";
 import { useCart } from "@/features/cart/hooks/useCart";
 import Button from "./Button";
 import { navLinks } from "../services/navigation";
@@ -13,6 +14,8 @@ import { navLinks } from "../services/navigation";
 export default function Navbar() {
     const pathname = usePathname();
     const { totalItems, openCart } = useCart();
+    const { session } = useSession();
+    const isAdmin = session?.user?.role === "admin";
 
     const [darkTheme, setDarkTheme] = useState(false);
 
@@ -57,57 +60,83 @@ export default function Navbar() {
                 </h1>
 
                 <div className="hidden items-center gap-6 md:flex">
-                    {navLinks.map((link) => {
-                        const isActive = pathname === link.href;
+                    {isAdmin ? (
+                        <Link
+                            href="/admin"
+                            className={[
+                                "relative px-0 py-1.5",
+                                "font-body text-sm/5 tracking-wider text-foreground-muted no-underline",
+                                "transition-colors duration-300 ease-in-out",
+                                "after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5",
+                                "after:origin-center after:scale-x-0 after:bg-primary",
+                                "after:transition-transform after:duration-300 after:ease-in-out",
+                                "hover:text-primary hover:after:scale-x-100",
+                                pathname === "/admin" &&
+                                    "font-bold text-primary after:scale-x-100",
+                            ]
+                                .filter(Boolean)
+                                .join(" ")}
+                            aria-current={
+                                pathname === "/admin" ? "page" : undefined
+                            }
+                        >
+                            Panel de Administración
+                        </Link>
+                    ) : (
+                        navLinks.map((link) => {
+                            const isActive = pathname === link.href;
 
-                        return (
-                            <Link
-                                key={link.href}
-                                href={link.href}
-                                className={[
-                                    "relative px-0 py-1.5",
-                                    "font-body text-sm/5 tracking-wider text-foreground-muted no-underline",
-                                    "transition-colors duration-300 ease-in-out",
-                                    "after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5",
-                                    "after:origin-center after:scale-x-0 after:bg-primary",
-                                    "after:transition-transform after:duration-300 after:ease-in-out",
-                                    "hover:text-primary hover:after:scale-x-100",
-                                    isActive &&
-                                        "font-bold text-primary after:scale-x-100",
-                                ]
-                                    .filter(Boolean)
-                                    .join(" ")}
-                                aria-current={isActive ? "page" : undefined}
-                            >
-                                {link.label}
-                            </Link>
-                        );
-                    })}
+                            return (
+                                <Link
+                                    key={link.href}
+                                    href={link.href}
+                                    className={[
+                                        "relative px-0 py-1.5",
+                                        "font-body text-sm/5 tracking-wider text-foreground-muted no-underline",
+                                        "transition-colors duration-300 ease-in-out",
+                                        "after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5",
+                                        "after:origin-center after:scale-x-0 after:bg-primary",
+                                        "after:transition-transform after:duration-300 after:ease-in-out",
+                                        "hover:text-primary hover:after:scale-x-100",
+                                        isActive &&
+                                            "font-bold text-primary after:scale-x-100",
+                                    ]
+                                        .filter(Boolean)
+                                        .join(" ")}
+                                    aria-current={isActive ? "page" : undefined}
+                                >
+                                    {link.label}
+                                </Link>
+                            );
+                        })
+                    )}
                 </div>
 
                 <div className="flex items-center gap-1 md:gap-2">
-                    <div className="relative">
-                        <Button
-                            variant="icon"
-                            onClick={openCart}
-                            aria-haspopup="dialog"
-                            aria-label={
-                                totalItems > 0
-                                    ? `Abrir carrito de compras (${totalItems} ${totalItems === 1 ? "producto" : "productos"})`
-                                    : "Abrir carrito de compras"
-                            }
-                        >
-                            <CartLarge5 />
-                        </Button>
-                        {totalItems > 0 && (
-                            <span
-                                aria-hidden="true"
-                                className="pointer-events-none absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground shadow-xs"
+                    {!isAdmin && (
+                        <div className="relative">
+                            <Button
+                                variant="icon"
+                                onClick={openCart}
+                                aria-haspopup="dialog"
+                                aria-label={
+                                    totalItems > 0
+                                        ? `Abrir carrito de compras (${totalItems} ${totalItems === 1 ? "producto" : "productos"})`
+                                        : "Abrir carrito de compras"
+                                }
                             >
-                                {totalItems > 99 ? "99+" : totalItems}
-                            </span>
-                        )}
-                    </div>
+                                <CartLarge5 />
+                            </Button>
+                            {totalItems > 0 && (
+                                <span
+                                    aria-hidden="true"
+                                    className="pointer-events-none absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground shadow-xs"
+                                >
+                                    {totalItems > 99 ? "99+" : totalItems}
+                                </span>
+                            )}
+                        </div>
+                    )}
                     <SessionActions />
                 </div>
             </nav>

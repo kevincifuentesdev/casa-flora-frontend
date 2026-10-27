@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Nunito_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
+import { AdminNavigationProvider } from "@/features/admin/context/AdminNavigationContext";
 import { SessionProvider } from "@/features/auth/context/SessionContext";
 import CartDrawer from "@/features/cart/components/CartDrawer";
 import { CartProvider } from "@/features/cart/context/CartContext";
@@ -30,11 +31,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <SessionProvider>
           <CartProvider>
-            <Navbar />
-            <main className="flex-1">{children}</main>
-            <Footer />
-            <BottomNavbar />
-            <CartDrawer />
+            <AdminNavigationProvider>
+              <Navbar />
+              <main className="flex-1">{children}</main>
+              <Footer />
+              <BottomNavbar />
+              <CartDrawer />
+            </AdminNavigationProvider>
           </CartProvider>
         </SessionProvider>
       </body>

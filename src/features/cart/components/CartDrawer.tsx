@@ -2,9 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 
+import type { OrderRecord } from "@/features/auth/domain/session";
 import { useSession } from "@/features/auth/hooks/useSession";
 import { formatPrice } from "@/features/products/domain/product";
 import { MAX_ITEM_QUANTITY } from "../domain/cart";
@@ -14,13 +15,21 @@ import {
     type DeliveryMethod,
 } from "../domain/checkoutValidation";
 import { useCart } from "../hooks/useCart";
-import { createCartCheckout } from "../services/checkoutService";
+import {
+    cancelPendingCartOrder,
+    createCartCheckout,
+    verifyCartCheckoutPayment,
+    type CheckoutSessionData,
+} from "../services/checkoutService";
+
+type PaymentStage = "idle" | "waiting" | "approved" | "rejected";
 
 const focusRing =
     "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary";
 
 export default function CartDrawer() {
     const pathname = usePathname();
+    const router = useRouter();
     const { session, refreshSession } = useSession();
     const {
         items,
@@ -28,12 +37,14 @@ export default function CartDrawer() {
         subtotal,
         estimatedPoints,
         isOpen,
+        openCart,
         closeCart,
         addItem,
         decrementItem,
         removeItem,
         clearCart,
     } = useCart();
+    const isAdmin = session?.user?.role === "admin";
 
     const [deliveryMethod, setDeliveryMethod] =
         useState<DeliveryMethod>("pickup");
@@ -53,6 +64,135 @@ export default function CartDrawer() {
         useState<CheckoutValidationErrors>({});
     const [checkoutError, setCheckoutError] = useState<string | null>(null);
     const [isRedirectingPayment, setIsRedirectingPayment] = useState(false);
+
+    const [paymentStage, setPaymentStage] = useState<PaymentStage>("idle");
+    const [activeSession, setActiveSession] =
+        useState<CheckoutSessionData | null>(null);
+    const [verifiedOrder, setVerifiedOrder] = useState<OrderRecord | null>(
+        null,
+    );
+    const [verifiedSummary, setVerifiedSummary] = useState<string>(
+        "Mercado Pago • Pago aprobado",
+    );
+    const [isCheckingPayment, setIsCheckingPayment] = useState(false);
+    const [verificationNotice, setVerificationNotice] = useState<string | null>(
+        null,
+    );
+
+    const runPaymentVerification = useCallback(
+        async (
+            externalReference: string,
+            paymentId?: string,
+            showPendingFeedback = false,
+        ) => {
+            setIsCheckingPayment(true);
+            if (showPendingFeedback) {
+                setVerificationNotice(null);
+            }
+
+            const res = await verifyCartCheckoutPayment({
+                externalReference,
+                ...(paymentId ? { paymentId } : {}),
+            });
+            setIsCheckingPayment(false);
+
+            if (res.error || !res.verification) {
+                if (showPendingFeedback) {
+                    setVerificationNotice(
+                        res.error ??
+                            "Aún no recibimos confirmación de Mercado Pago. Completa el pago en la pestaña abierta e intenta de nuevo.",
+                    );
+                }
+                return;
+            }
+
+            if (res.verification.status === "approved") {
+                setVerifiedSummary(res.verification.paymentSummary);
+                setVerifiedOrder(res.verification.order);
+                setPaymentStage("approved");
+                setVerificationNotice(null);
+                clearCart();
+                await refreshSession();
+                return;
+            }
+
+            if (res.verification.status === "rejected") {
+                setVerifiedSummary(res.verification.paymentSummary);
+                setVerifiedOrder(res.verification.order);
+                setPaymentStage("rejected");
+                setVerificationNotice(null);
+                await refreshSession();
+                return;
+            }
+
+            if (showPendingFeedback) {
+                setVerificationNotice(
+                    "Mercado Pago aún reporta el pago como pendiente. Si acabas de pagar, espera unos segundos y vuelve a verificar.",
+                );
+            }
+        },
+        [clearCart, refreshSession],
+    );
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const params = new URLSearchParams(window.location.search);
+        const ref =
+            params.get("external_reference") ?? params.get("ref") ?? null;
+        const paymentParam =
+            params.get("payment") ?? params.get("collection_status") ?? null;
+        const paymentId =
+            params.get("payment_id") ?? params.get("collection_id") ?? undefined;
+
+        if (!ref || !paymentParam) return;
+
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, "", cleanUrl);
+
+        queueMicrotask(() => {
+            openCart();
+            setActiveSession((prev) =>
+                prev ?? {
+                    preferenceId: ref,
+                    externalReference: ref,
+                    checkoutUrl: "https://www.mercadopago.com.co",
+                    sandboxCheckoutUrl: "https://www.mercadopago.com.co",
+                    deliveryMethod: "pickup",
+                    addressLabel: "Pedido en verificación",
+                    totalAmount: 0,
+                    pointsEarned: 0,
+                    order: null,
+                },
+            );
+            setPaymentStage("waiting");
+            void runPaymentVerification(ref, paymentId, true);
+        });
+    }, [openCart, runPaymentVerification]);
+
+    useEffect(() => {
+        if (
+            !isOpen ||
+            paymentStage !== "waiting" ||
+            !activeSession?.externalReference
+        ) {
+            return;
+        }
+
+        const extRef = activeSession.externalReference;
+        const intervalId = window.setInterval(() => {
+            void runPaymentVerification(extRef, undefined, false);
+        }, 3200);
+
+        const handleWindowFocus = () => {
+            void runPaymentVerification(extRef, undefined, false);
+        };
+
+        window.addEventListener("focus", handleWindowFocus);
+        return () => {
+            window.clearInterval(intervalId);
+            window.removeEventListener("focus", handleWindowFocus);
+        };
+    }, [isOpen, paymentStage, activeSession?.externalReference, runPaymentVerification]);
 
     useEffect(() => {
         if (!isOpen) {
@@ -168,12 +308,34 @@ export default function CartDrawer() {
             return;
         }
 
+        setIsRedirectingPayment(false);
+        setActiveSession(result.session);
+        setVerifiedOrder(result.session.order);
+        setVerificationNotice(null);
+        setPaymentStage("waiting");
+
         if (isAuthenticated) {
             await refreshSession();
         }
 
-        clearCart();
-        window.location.assign(result.session.checkoutUrl);
+        window.open(result.session.checkoutUrl, "_blank", "noopener,noreferrer");
+    };
+
+    const handleCancelWaitingCheckout = async () => {
+        if (activeSession?.order?.id && isAuthenticated) {
+            await cancelPendingCartOrder(activeSession.order.id);
+            await refreshSession();
+        }
+        setPaymentStage("idle");
+        setActiveSession(null);
+        setVerificationNotice(null);
+    };
+
+    const handleResetAndClose = () => {
+        setPaymentStage("idle");
+        setActiveSession(null);
+        setVerificationNotice(null);
+        closeCart();
     };
 
     return (
@@ -184,7 +346,7 @@ export default function CartDrawer() {
             className="fixed inset-0 z-60 flex items-end justify-end bg-black/55 backdrop-blur-xs sm:items-stretch"
             onClick={(event) => {
                 if (event.target === event.currentTarget) {
-                    closeCart();
+                    handleResetAndClose();
                 }
             }}
         >
@@ -196,9 +358,15 @@ export default function CartDrawer() {
                                 id="cart-drawer-title"
                                 className="m-0 font-display text-2xl font-bold text-primary"
                             >
-                                Tu Bolsa
+                                {paymentStage === "waiting"
+                                    ? "Validando tu pago"
+                                    : paymentStage === "approved"
+                                      ? "¡Pedido confirmado!"
+                                      : paymentStage === "rejected"
+                                        ? "Pago no completado"
+                                        : "Tu Bolsa"}
                             </h2>
-                            {totalItems > 0 && (
+                            {paymentStage === "idle" && totalItems > 0 && (
                                 <span className="inline-flex items-center justify-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary dark:bg-primary/25 dark:text-foreground">
                                     {totalItems}{" "}
                                     {totalItems === 1 ? "plato" : "platos"}
@@ -206,12 +374,18 @@ export default function CartDrawer() {
                             )}
                         </div>
                         <p className="m-0 mt-0.5 text-xs text-foreground-muted">
-                            Cocina artesanal lista para compartir en tu mesa.
+                            {paymentStage === "waiting"
+                                ? "Completa el pago en la pestaña de Mercado Pago."
+                                : paymentStage === "approved"
+                                  ? "Tu pago fue verificado exitosamente con Mercado Pago."
+                                  : paymentStage === "rejected"
+                                    ? "Tu bolsa sigue intacta para que puedas reintentar."
+                                    : "Cocina artesanal lista para compartir en tu mesa."}
                         </p>
                     </div>
 
                     <div className="flex items-center gap-2">
-                        {items.length > 0 && (
+                        {paymentStage === "idle" && items.length > 0 && !isAdmin && (
                             <button
                                 type="button"
                                 onClick={clearCart}
@@ -222,7 +396,7 @@ export default function CartDrawer() {
                         )}
                         <button
                             type="button"
-                            onClick={closeCart}
+                            onClick={handleResetAndClose}
                             aria-label="Cerrar carrito de compras"
                             className={`inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-foreground-muted/25 bg-background text-foreground-muted transition hover:border-primary/40 hover:text-foreground ${focusRing}`}
                         >
@@ -245,6 +419,257 @@ export default function CartDrawer() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto px-5 py-4 sm:px-6">
+                    {isAdmin ? (
+                        <div className="flex flex-col items-center justify-center rounded-2xl border border-foreground-muted/15 bg-background p-8 text-center">
+                            <span className="rounded-full bg-primary/10 px-4 py-1 text-xs font-bold text-primary">
+                                Cuenta de Administrador
+                            </span>
+                            <h3 className="mt-4 mb-2 font-display text-xl text-primary">
+                                Pedidos Deshabilitados
+                            </h3>
+                            <p className="max-w-xs text-sm text-foreground-muted">
+                                Las cuentas de administrador no realizan pedidos de comensales. Toda la gestión se realiza desde el panel de administración.
+                            </p>
+                            <Link
+                                href="/admin"
+                                onClick={closeCart}
+                                className="mt-5 inline-flex items-center justify-center rounded-full bg-primary px-5 py-2.5 text-xs font-bold text-primary-foreground no-underline transition hover:opacity-90"
+                            >
+                                Ir al Panel de Administración
+                            </Link>
+                        </div>
+                    ) : paymentStage === "waiting" && activeSession ? (
+                        <div className="flex flex-col items-center justify-center rounded-2xl border border-foreground-muted/15 bg-background p-6 text-center">
+                            <span className="flex size-14 items-center justify-center rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                                <svg
+                                    aria-hidden="true"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.8"
+                                    className="size-7 animate-pulse"
+                                >
+                                    <circle cx="12" cy="12" r="9" />
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M12 7v5l3 2"
+                                    />
+                                </svg>
+                            </span>
+
+                            <h3 className="m-0 mt-4 font-display text-xl font-bold text-primary">
+                                Esperando aprobación de Mercado Pago
+                            </h3>
+                            <p className="m-0 mt-2 text-xs/5 text-foreground-muted">
+                                Abrimos la pasarela en una nueva pestaña. Apenas
+                                apruebes el pago allá, esta ventana validará la
+                                transacción automáticamente sin que tengas que
+                                buscar un botón de regreso.
+                            </p>
+
+                            <div className="mt-4 w-full rounded-xl border border-foreground-muted/15 bg-surface p-3.5 text-left text-xs">
+                                <div className="flex items-center justify-between gap-2">
+                                    <span className="text-foreground-muted">
+                                        Estado actual:
+                                    </span>
+                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-0.5 font-bold text-amber-800 dark:text-amber-300">
+                                        Pendiente de pago
+                                    </span>
+                                </div>
+                                {activeSession.totalAmount > 0 && (
+                                    <div className="mt-2 flex items-center justify-between gap-2">
+                                        <span className="text-foreground-muted">
+                                            Total:
+                                        </span>
+                                        <span className="font-bold text-foreground">
+                                            {formatPrice(
+                                                activeSession.totalAmount,
+                                            )}
+                                        </span>
+                                    </div>
+                                )}
+                                <div className="mt-2 flex items-center justify-between gap-2">
+                                    <span className="text-foreground-muted">
+                                        Entrega:
+                                    </span>
+                                    <span className="truncate font-semibold text-foreground">
+                                        {activeSession.addressLabel}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {verificationNotice && (
+                                <p
+                                    role="status"
+                                    className="mt-3 w-full rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2.5 text-xs font-medium text-amber-900 dark:text-amber-200"
+                                >
+                                    {verificationNotice}
+                                </p>
+                            )}
+
+                            <div className="mt-5 flex w-full flex-col gap-2.5">
+                                <button
+                                    type="button"
+                                    disabled={isCheckingPayment}
+                                    onClick={() =>
+                                        void runPaymentVerification(
+                                            activeSession.externalReference,
+                                            undefined,
+                                            true,
+                                        )
+                                    }
+                                    className={`inline-flex min-h-11 w-full cursor-pointer items-center justify-center rounded-full bg-primary px-5 py-2.5 text-xs font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-60 ${focusRing}`}
+                                >
+                                    {isCheckingPayment
+                                        ? "Verificando con Mercado Pago..."
+                                        : "Ya realicé el pago, verificar ahora"}
+                                </button>
+
+                                <a
+                                    href={activeSession.checkoutUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`inline-flex min-h-11 w-full items-center justify-center rounded-full border border-primary/40 bg-surface px-5 py-2.5 text-xs font-bold text-primary no-underline transition hover:bg-background dark:border-foreground-muted/35 dark:text-foreground ${focusRing}`}
+                                >
+                                    Abrir pestaña de Mercado Pago nuevamente
+                                </a>
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        void handleCancelWaitingCheckout()
+                                    }
+                                    className={`inline-flex min-h-11 w-full cursor-pointer items-center justify-center rounded-full border border-destructive/35 bg-transparent px-5 py-2 text-xs font-semibold text-destructive transition hover:bg-destructive/10 ${focusRing}`}
+                                >
+                                    Cancelar y volver a mi bolsa
+                                </button>
+                            </div>
+                        </div>
+                    ) : paymentStage === "approved" ? (
+                        <div className="flex flex-col items-center justify-center rounded-2xl border border-emerald-500/30 bg-emerald-500/8 p-6 text-center">
+                            <span className="flex size-14 items-center justify-center rounded-full bg-emerald-600 text-white">
+                                <svg
+                                    aria-hidden="true"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2.2"
+                                    className="size-7"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M5 13l4 4L19 7"
+                                    />
+                                </svg>
+                            </span>
+
+                            <h3 className="m-0 mt-4 font-display text-2xl font-bold text-primary">
+                                ¡Pago verificado con éxito!
+                            </h3>
+                            <p className="m-0 mt-2 text-xs/5 text-foreground">
+                                Mercado Pago confirmó la aprobación de tu pago y
+                                nuestra cocina ya está preparando tu pedido.
+                            </p>
+
+                            <div className="mt-4 w-full rounded-xl border border-foreground-muted/15 bg-surface p-4 text-left text-xs">
+                                {verifiedOrder && (
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="text-foreground-muted">
+                                            Orden:
+                                        </span>
+                                        <span className="font-bold text-primary">
+                                            #{verifiedOrder.orderNumber}
+                                        </span>
+                                    </div>
+                                )}
+                                <div className="mt-1.5 flex items-center justify-between gap-2">
+                                    <span className="text-foreground-muted">
+                                        Medio verificado:
+                                    </span>
+                                    <span className="font-semibold text-emerald-700 dark:text-emerald-300">
+                                        {verifiedSummary}
+                                    </span>
+                                </div>
+                                {verifiedOrder &&
+                                    verifiedOrder.pointsEarned > 0 && (
+                                        <div className="mt-1.5 flex items-center justify-between gap-2">
+                                            <span className="text-foreground-muted">
+                                                Puntos acreditados:
+                                            </span>
+                                            <span className="font-bold text-accent">
+                                                +{verifiedOrder.pointsEarned} pts
+                                            </span>
+                                        </div>
+                                    )}
+                            </div>
+
+                            <div className="mt-5 flex w-full flex-col gap-2.5">
+                                {isAuthenticated && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            handleResetAndClose();
+                                            router.push("/profile");
+                                        }}
+                                        className={`inline-flex min-h-11 w-full cursor-pointer items-center justify-center rounded-full bg-primary px-5 py-2.5 text-xs font-bold text-primary-foreground transition hover:opacity-90 ${focusRing}`}
+                                    >
+                                        Ver mi pedido en Mi Perfil
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={handleResetAndClose}
+                                    className={`inline-flex min-h-11 w-full cursor-pointer items-center justify-center rounded-full border border-primary/40 bg-surface px-5 py-2.5 text-xs font-bold text-primary transition hover:bg-background dark:border-foreground-muted/35 dark:text-foreground ${focusRing}`}
+                                >
+                                    Seguir explorando la carta
+                                </button>
+                            </div>
+                        </div>
+                    ) : paymentStage === "rejected" ? (
+                        <div className="flex flex-col items-center justify-center rounded-2xl border border-destructive/30 bg-destructive/8 p-6 text-center">
+                            <span className="flex size-14 items-center justify-center rounded-full bg-destructive text-white">
+                                <svg
+                                    aria-hidden="true"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2.2"
+                                    className="size-7"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M6 6l12 12M18 6L6 18"
+                                    />
+                                </svg>
+                            </span>
+
+                            <h3 className="m-0 mt-4 font-display text-xl font-bold text-primary">
+                                El pago fue rechazado
+                            </h3>
+                            <p className="m-0 mt-2 text-xs/5 text-foreground">
+                                Mercado Pago reportó que la transacción no fue
+                                aprobada ({verifiedSummary}). No se realizó
+                                ningún cargo y tus platos siguen en la bolsa.
+                            </p>
+
+                            <div className="mt-5 flex w-full flex-col gap-2.5">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setPaymentStage("idle");
+                                        setActiveSession(null);
+                                    }}
+                                    className={`inline-flex min-h-11 w-full cursor-pointer items-center justify-center rounded-full bg-primary px-5 py-2.5 text-xs font-bold text-primary-foreground transition hover:opacity-90 ${focusRing}`}
+                                >
+                                    Volver a mi bolsa e intentar de nuevo
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
                     {!isAuthenticated ? (
                         <div className="mb-4 rounded-2xl border border-[#e5c5b5] bg-[#fbf5e8] p-4 dark:border-foreground-muted/20 dark:bg-background-alt">
                             <div className="flex items-start gap-3">
@@ -836,9 +1261,11 @@ export default function CartDrawer() {
                             </div>
                         </>
                     )}
+                        </>
+                    )}
                 </div>
 
-                {items.length > 0 && (
+                {paymentStage === "idle" && items.length > 0 && !isAdmin && (
                     <div className="border-t border-foreground-muted/15 bg-background px-5 py-4 pb-6 sm:px-6">
                         {checkoutError && (
                             <div

@@ -38,10 +38,17 @@ export function useAuthForm() {
     }, [errorVersion]);
 
     const handleSubmit = useCallback(async () => {
-        const success =
-            mode === "login" ? await submitLogin() : await submitSignUp();
+        if (mode === "login") {
+            const session = await submitLogin();
+            if (session) {
+                router.push(session.user.role === "admin" ? "/admin" : "/");
+            }
+            return;
+        }
+
+        const success = await submitSignUp();
         if (success) {
-            router.push(mode === "signup" ? "/onboarding" : "/");
+            router.push("/onboarding");
         }
     }, [mode, router, submitLogin, submitSignUp]);
 
