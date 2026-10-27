@@ -98,7 +98,6 @@ export interface SessionUser {
 
 export interface Session {
     user: SessionUser;
-    token?: string;
 }
 
 export type SessionState = Session | null | undefined;

@@ -8,6 +8,7 @@ import { API_BASE_URL } from "@/features/common/services/apiClient";
 
 export const authClient = createAuthClient({
     baseURL: API_BASE_URL,
+    fetchOptions: { credentials: "include" },
     plugins: [
         usernameClient(),
         inferAdditionalFields({

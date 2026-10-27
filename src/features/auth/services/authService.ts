@@ -20,7 +20,7 @@ import type {
     UserPreferences,
 } from "../domain/session";
 import { authClient } from "./authClient";
-import { clearSession, getSessionSnapshot, saveSession } from "./sessionService";
+import { clearSession, saveSession } from "./sessionService";
 
 export interface AuthServiceResult {
     session?: Session;
@@ -217,14 +217,12 @@ function translateAuthErrorMessage(
 }
 
 export async function syncSessionWithBackend(): Promise<Session | null> {
-    const existingToken = getSessionSnapshot()?.token;
     try {
         const res = await apiRequest<{ data: Record<string, unknown> }>(
             "/api/users/me",
         );
         const session: Session = {
             user: mapBetterAuthUser(res.data),
-            ...(existingToken ? { token: existingToken } : {}),
         };
         saveSession(session);
         return session;
@@ -254,17 +252,6 @@ export async function loginWithBetterAuth(
               });
 
         if (response.data?.user) {
-            const token = (response.data as { token?: string }).token;
-            if (token) {
-                saveSession({
-                    user: mapBetterAuthUser(
-                        response.data.user as Record<string, unknown>,
-                        isEmail ? { email: identifier } : { username: identifier },
-                    ),
-                    token,
-                });
-            }
-
             const synced = await syncSessionWithBackend();
             if (synced) return { session: synced };
 
@@ -273,7 +260,6 @@ export async function loginWithBetterAuth(
                     response.data.user as Record<string, unknown>,
                     isEmail ? { email: identifier } : { username: identifier },
                 ),
-                ...(token ? { token } : {}),
             };
             saveSession(session);
             return { session };
@@ -314,24 +300,6 @@ export async function signUpWithBetterAuth(
         });
 
         if (response.data?.user) {
-            const token = (response.data as { token?: string }).token;
-            if (token) {
-                saveSession({
-                    user: mapBetterAuthUser(
-                        response.data.user as Record<string, unknown>,
-                        {
-                            name: fullName,
-                            firstName,
-                            lastName,
-                            birthDate,
-                            username,
-                            email,
-                        },
-                    ),
-                    token,
-                });
-            }
-
             const synced = await syncSessionWithBackend();
             if (synced) return { session: synced };
 
@@ -347,7 +315,6 @@ export async function signUpWithBetterAuth(
                         email,
                     },
                 ),
-                ...(token ? { token } : {}),
             };
             saveSession(session);
             return { session };
