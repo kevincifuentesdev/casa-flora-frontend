@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
     AngleDown,
+    AngleLeft,
+    AngleRight,
     Call,
     Clock,
     SearchNormal2,
@@ -12,6 +14,8 @@ import {
 
 const focusRing =
     "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary";
+
+const ITEMS_PER_PAGE = 5;
 
 interface FaqItem {
     id: string;
@@ -150,6 +154,7 @@ export default function FaqPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<string>("todos");
     const [openId, setOpenId] = useState<string | null>(FAQ_ITEMS[0]?.id ?? null);
+    const [currentPage, setCurrentPage] = useState(1);
 
     const filteredFaqs = useMemo(() => {
         const query = searchQuery.trim().toLowerCase();
@@ -163,6 +168,26 @@ export default function FaqPage() {
             return matchesCategory && matchesQuery;
         });
     }, [searchQuery, selectedCategory]);
+
+    const totalPages = Math.max(1, Math.ceil(filteredFaqs.length / ITEMS_PER_PAGE));
+    const safeCurrentPage = Math.min(currentPage, totalPages);
+
+    const paginatedFaqs = useMemo(() => {
+        const startIndex = (safeCurrentPage - 1) * ITEMS_PER_PAGE;
+        return filteredFaqs.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    }, [filteredFaqs, safeCurrentPage]);
+
+    const handleSearchChange = (value: string) => {
+        setSearchQuery(value);
+        setCurrentPage(1);
+        setOpenId(null);
+    };
+
+    const handleCategoryChange = (catId: string) => {
+        setSelectedCategory(catId);
+        setCurrentPage(1);
+        setOpenId(null);
+    };
 
     const toggleItem = (id: string) => {
         setOpenId((prev) => (prev === id ? null : id));
@@ -193,7 +218,7 @@ export default function FaqPage() {
                     <input
                         type="search"
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => handleSearchChange(e.target.value)}
                         placeholder="Busca por palabra clave (ej. domicilio, reserva, pago, puntos)..."
                         aria-label="Buscar en preguntas frecuentes"
                         className={`min-h-12 w-full rounded-full border border-foreground-muted/20 bg-surface py-3 pr-4 pl-11 text-xs text-foreground shadow-xs placeholder:text-foreground-muted sm:text-sm ${focusRing}`}
@@ -214,7 +239,7 @@ export default function FaqPage() {
                                 type="button"
                                 role="tab"
                                 aria-selected={isSelected}
-                                onClick={() => setSelectedCategory(cat.id)}
+                                onClick={() => handleCategoryChange(cat.id)}
                                 className={`inline-flex min-h-9 cursor-pointer items-center rounded-full px-4 py-1.5 text-xs font-semibold transition ${
                                     isSelected
                                         ? "bg-primary text-primary-foreground shadow-xs"
@@ -244,6 +269,8 @@ export default function FaqPage() {
                             onClick={() => {
                                 setSearchQuery("");
                                 setSelectedCategory("todos");
+                                setCurrentPage(1);
+                                setOpenId(null);
                             }}
                             className={`mt-4 inline-flex min-h-10 cursor-pointer items-center rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground transition hover:opacity-90 ${focusRing}`}
                         >
@@ -251,46 +278,154 @@ export default function FaqPage() {
                         </button>
                     </div>
                 ) : (
-                    <div className="flex flex-col gap-3.5">
-                        {filteredFaqs.map((item) => {
-                            const isOpen = openId === item.id;
-                            return (
-                                <div
-                                    key={item.id}
-                                    className="overflow-hidden rounded-2xl border border-foreground-muted/15 bg-surface shadow-xs transition"
-                                >
+                    <div>
+                        <div className="mb-4 flex items-center justify-between text-xs text-foreground-muted">
+                            <span>
+                                {filteredFaqs.length}{" "}
+                                {filteredFaqs.length === 1
+                                    ? "pregunta encontrada"
+                                    : "preguntas encontradas"}
+                            </span>
+                            {totalPages > 1 && (
+                                <span>
+                                    Página {safeCurrentPage} de {totalPages}
+                                </span>
+                            )}
+                        </div>
+
+                        <div className="flex flex-col gap-3.5">
+                            {paginatedFaqs.map((item) => {
+                                const isOpen = openId === item.id;
+                                return (
+                                    <div
+                                        key={item.id}
+                                        className="overflow-hidden rounded-2xl border border-foreground-muted/15 bg-surface shadow-xs transition"
+                                    >
+                                        <button
+                                            type="button"
+                                            aria-expanded={isOpen}
+                                            aria-controls={`faq-answer-${item.id}`}
+                                            onClick={() => toggleItem(item.id)}
+                                            className={`flex w-full cursor-pointer items-center justify-between gap-4 p-5 text-left transition hover:bg-background-alt/50 sm:p-6 ${focusRing}`}
+                                        >
+                                            <span className="font-display text-base font-bold text-primary sm:text-lg">
+                                                {item.question}
+                                            </span>
+                                            <span
+                                                className={`inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-foreground-muted/20 bg-background text-primary transition-transform duration-200 ${
+                                                    isOpen ? "rotate-180" : ""
+                                                }`}
+                                                aria-hidden="true"
+                                            >
+                                                <AngleDown className="size-4" />
+                                            </span>
+                                        </button>
+
+                                        {isOpen && (
+                                            <div
+                                                id={`faq-answer-${item.id}`}
+                                                role="region"
+                                                className="border-t border-foreground-muted/10 px-5 pt-3.5 pb-5 text-xs leading-relaxed text-foreground-muted sm:px-6 sm:pb-6 sm:text-sm"
+                                            >
+                                                {item.answer}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Pagination Controls */}
+                        {totalPages > 1 && (
+                            <nav
+                                aria-label="Paginación de preguntas frecuentes"
+                                className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-foreground-muted/15 pt-6 sm:flex-row"
+                            >
+                                <p className="m-0 text-xs text-foreground-muted">
+                                    Mostrando{" "}
+                                    {(safeCurrentPage - 1) * ITEMS_PER_PAGE + 1}{" "}
+                                    a{" "}
+                                    {Math.min(
+                                        safeCurrentPage * ITEMS_PER_PAGE,
+                                        filteredFaqs.length,
+                                    )}{" "}
+                                    de {filteredFaqs.length} preguntas
+                                </p>
+
+                                <div className="flex items-center gap-1.5">
                                     <button
                                         type="button"
-                                        aria-expanded={isOpen}
-                                        aria-controls={`faq-answer-${item.id}`}
-                                        onClick={() => toggleItem(item.id)}
-                                        className={`flex w-full cursor-pointer items-center justify-between gap-4 p-5 text-left transition hover:bg-background-alt/50 sm:p-6 ${focusRing}`}
+                                        disabled={safeCurrentPage <= 1}
+                                        onClick={() => {
+                                            setCurrentPage((prev) =>
+                                                Math.max(1, prev - 1),
+                                            );
+                                            setOpenId(null);
+                                        }}
+                                        aria-label="Página anterior"
+                                        className={`inline-flex min-h-9 items-center gap-1 rounded-full border border-foreground-muted/20 bg-surface px-3.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-background-alt disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`}
                                     >
-                                        <span className="font-display text-base font-bold text-primary sm:text-lg">
-                                            {item.question}
-                                        </span>
-                                        <span
-                                            className={`inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-foreground-muted/20 bg-background text-primary transition-transform duration-200 ${
-                                                isOpen ? "rotate-180" : ""
-                                            }`}
+                                        <AngleLeft
+                                            className="size-3.5"
                                             aria-hidden="true"
-                                        >
-                                            <AngleDown className="size-4" />
-                                        </span>
+                                        />
+                                        <span>Anterior</span>
                                     </button>
 
-                                    {isOpen && (
-                                        <div
-                                            id={`faq-answer-${item.id}`}
-                                            role="region"
-                                            className="border-t border-foreground-muted/10 px-5 pt-3.5 pb-5 text-xs leading-relaxed text-foreground-muted sm:px-6 sm:pb-6 sm:text-sm"
-                                        >
-                                            {item.answer}
-                                        </div>
-                                    )}
+                                    <div className="flex items-center gap-1">
+                                        {Array.from(
+                                            { length: totalPages },
+                                            (_, i) => i + 1,
+                                        ).map((page) => {
+                                            const isCurrent =
+                                                page === safeCurrentPage;
+                                            return (
+                                                <button
+                                                    key={page}
+                                                    type="button"
+                                                    aria-current={
+                                                        isCurrent
+                                                            ? "page"
+                                                            : undefined
+                                                    }
+                                                    aria-label={`Ir a la página ${page}`}
+                                                    onClick={() => {
+                                                        setCurrentPage(page);
+                                                        setOpenId(null);
+                                                    }}
+                                                    className={`inline-flex size-9 cursor-pointer items-center justify-center rounded-full text-xs font-bold transition ${
+                                                        isCurrent
+                                                            ? "bg-primary text-primary-foreground shadow-xs"
+                                                            : "border border-foreground-muted/20 bg-surface text-foreground hover:bg-background-alt"
+                                                    } ${focusRing}`}
+                                                >
+                                                    {page}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        disabled={safeCurrentPage >= totalPages}
+                                        onClick={() => {
+                                            setCurrentPage((prev) =>
+                                                Math.min(totalPages, prev + 1),
+                                            );
+                                            setOpenId(null);
+                                        }}
+                                        aria-label="Página siguiente"
+                                        className={`inline-flex min-h-9 items-center gap-1 rounded-full border border-foreground-muted/20 bg-surface px-3.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-background-alt disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`}
+                                    >
+                                        <span>Siguiente</span>
+                                        <AngleRight
+                                            className="size-3.5"
+                                            aria-hidden="true"
+                                        />
+                                    </button>
                                 </div>
-                            );
-                        })}
+                            </nav>
+                        )}
                     </div>
                 )}
             </div>
