@@ -248,6 +248,9 @@ export default function CartDrawer() {
 
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === "Escape") {
+                if (paymentStage === "waiting") {
+                    return;
+                }
                 closeCart();
             }
         };
@@ -257,7 +260,23 @@ export default function CartDrawer() {
             document.body.style.overflow = previousOverflow;
             window.removeEventListener("keydown", handleKeyDown);
         };
-    }, [isOpen, closeCart]);
+    }, [isOpen, closeCart, paymentStage]);
+
+    useEffect(() => {
+        if (paymentStage !== "waiting") {
+            return;
+        }
+
+        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+            event.preventDefault();
+            event.returnValue = "";
+        };
+
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        return () => {
+            window.removeEventListener("beforeunload", handleBeforeUnload);
+        };
+    }, [paymentStage]);
 
     if (!isOpen || pathname === "/onboarding") {
         return null;
@@ -384,6 +403,9 @@ export default function CartDrawer() {
     };
 
     const handleResetAndClose = () => {
+        if (paymentStage === "waiting") {
+            return;
+        }
         setPaymentStage("idle");
         setActiveSession(null);
         setVerificationNotice(null);
@@ -399,6 +421,9 @@ export default function CartDrawer() {
             className="fixed inset-0 z-60 flex items-end justify-end bg-black/55 backdrop-blur-xs sm:items-stretch"
             onClick={(event) => {
                 if (event.target === event.currentTarget) {
+                    if (paymentStage === "waiting") {
+                        return;
+                    }
                     handleResetAndClose();
                 }
             }}
@@ -447,27 +472,54 @@ export default function CartDrawer() {
                                 Vaciar
                             </button>
                         )}
-                        <button
-                            type="button"
-                            onClick={handleResetAndClose}
-                            aria-label="Cerrar carrito de compras"
-                            className={`inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-foreground-muted/25 bg-background text-foreground-muted transition hover:border-primary/40 hover:text-foreground ${focusRing}`}
-                        >
-                            <svg
-                                aria-hidden="true"
-                                viewBox="0 0 20 20"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="1.8"
-                                className="size-4"
+                        {paymentStage === "waiting" ? (
+                            <span
+                                title="Esperando confirmación o cancelación del pago"
+                                aria-label="Proceso de pago en espera de confirmación o cancelación"
+                                className="inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
                             >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M5 5l10 10M15 5L5 15"
-                                />
-                            </svg>
-                        </button>
+                                <svg
+                                    aria-hidden="true"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    className="size-4"
+                                >
+                                    <rect
+                                        x="3"
+                                        y="11"
+                                        width="18"
+                                        height="11"
+                                        rx="2"
+                                        ry="2"
+                                    />
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                </svg>
+                            </span>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={handleResetAndClose}
+                                aria-label="Cerrar carrito de compras"
+                                className={`inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-foreground-muted/25 bg-background text-foreground-muted transition hover:border-primary/40 hover:text-foreground ${focusRing}`}
+                            >
+                                <svg
+                                    aria-hidden="true"
+                                    viewBox="0 0 20 20"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.8"
+                                    className="size-4"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M5 5l10 10M15 5L5 15"
+                                    />
+                                </svg>
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -618,6 +670,10 @@ export default function CartDrawer() {
                                 >
                                     Cancelar y volver a mi bolsa
                                 </button>
+
+                                <p className="m-0 mt-1 text-[11px] text-foreground-muted">
+                                    Este panel permanecerá abierto esperando la confirmación de Mercado Pago. Puedes cancelarlo en cualquier momento usando el botón anterior.
+                                </p>
                             </div>
                         </div>
                     ) : paymentStage === "approved" ? (
