@@ -14,9 +14,11 @@ const focusRing =
 export default function ProductCard({
     product,
     index,
+    onSelectProduct,
 }: {
     product: Product;
     index: number;
+    onSelectProduct?: (product: Product) => void;
 }) {
     const { session } = useSession();
     const isAdmin = session?.user?.role === "admin";
@@ -25,7 +27,25 @@ export default function ProductCard({
 
     return (
         <div
-            className="group flex animate-card-in flex-col overflow-hidden rounded-lg bg-surface shadow-[0_8px_24px_rgb(38_24_20/6%)] transition duration-300 hover:-translate-y-1.5 hover:shadow-[0_16px_32px_rgb(38_24_20/12%)]"
+            role={onSelectProduct ? "button" : undefined}
+            tabIndex={onSelectProduct ? 0 : undefined}
+            aria-label={
+                onSelectProduct
+                    ? `Ver detalles de ${product.name}`
+                    : undefined
+            }
+            onClick={() => onSelectProduct?.(product)}
+            onKeyDown={(e) => {
+                if (onSelectProduct && (e.key === "Enter" || e.key === " ")) {
+                    e.preventDefault();
+                    onSelectProduct(product);
+                }
+            }}
+            className={`group flex animate-card-in flex-col overflow-hidden rounded-lg bg-surface shadow-[0_8px_24px_rgb(38_24_20/6%)] transition duration-300 hover:-translate-y-1.5 hover:shadow-[0_16px_32px_rgb(38_24_20/12%)] ${
+                onSelectProduct
+                    ? "cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+                    : ""
+            }`}
             style={{ animationDelay: `${index * 0.05}s` }}
         >
             <div className="relative h-56 overflow-hidden">
@@ -49,7 +69,7 @@ export default function ProductCard({
             </div>
 
             <div className="flex grow flex-col p-6">
-                <h3 className="mt-0 mb-2 font-display text-2xl leading-8 text-primary">
+                <h3 className="mt-0 mb-2 font-display text-2xl leading-8 text-primary transition group-hover:text-secondary">
                     {product.name}
                 </h3>
                 <p className="mt-0 mb-6 line-clamp-2 text-base leading-6 text-foreground-muted">
@@ -76,7 +96,10 @@ export default function ProductCard({
                             >
                                 <button
                                     type="button"
-                                    onClick={() => decrementItem(product.id)}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        decrementItem(product.id);
+                                    }}
                                     aria-label={
                                         quantityInCart === 1
                                             ? `Quitar ${product.name} de la bolsa`
@@ -88,7 +111,10 @@ export default function ProductCard({
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={openCart}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        openCart();
+                                    }}
                                     aria-label={`Ver ${quantityInCart} en tu bolsa`}
                                     className={`inline-flex min-h-11 min-w-8 cursor-pointer items-center justify-center border-none bg-transparent px-1.5 text-xs font-bold text-primary ${focusRing}`}
                                 >
@@ -96,7 +122,10 @@ export default function ProductCard({
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => addItem(product, 1)}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        addItem(product, 1);
+                                    }}
                                     aria-label={`Agregar otra unidad de ${product.name}`}
                                     className={`inline-flex size-11 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-sm font-bold text-primary transition hover:bg-primary/10 active:scale-95 ${focusRing}`}
                                 >
@@ -107,7 +136,10 @@ export default function ProductCard({
                     ) : (
                         <button
                             type="button"
-                            onClick={() => addItem(product, 1)}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                addItem(product, 1);
+                            }}
                             aria-label={`Agregar ${product.name} al carrito`}
                             title="Agregar al carrito"
                             className={`inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-full border-none bg-transparent p-2 text-primary transition hover:bg-primary/8 active:scale-95 ${focusRing}`}

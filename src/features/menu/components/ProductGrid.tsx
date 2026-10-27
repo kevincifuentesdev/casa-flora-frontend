@@ -1,13 +1,18 @@
 "use client";
 
+import { useState } from "react";
+
 import ActiveFilters from "@/features/menu/components/ActiveFilters";
 import EmptyState from "@/features/menu/components/EmptyState";
 import ProductCard from "@/features/menu/components/ProductCard";
+import ProductDetailModal from "@/features/menu/components/ProductDetailModal";
 import { useFilteredProducts } from "@/features/menu/hooks/useFilteredProducts";
+import type { Product } from "@/features/products/domain/product";
 
 export default function ProductGrid() {
     const { products, total, isLoading, error, reloadCatalog } =
         useFilteredProducts();
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
     return (
         <div className="w-full md:min-w-0 md:flex-1">
@@ -59,9 +64,18 @@ export default function ProductGrid() {
                             key={product.id}
                             product={product}
                             index={i}
+                            onSelectProduct={setSelectedProduct}
                         />
                     ))}
                 </div>
+            )}
+
+            {selectedProduct && (
+                <ProductDetailModal
+                    key={selectedProduct.id}
+                    product={selectedProduct}
+                    onClose={() => setSelectedProduct(null)}
+                />
             )}
         </div>
     );
