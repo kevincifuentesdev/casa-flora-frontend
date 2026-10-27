@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { CartAdd } from "reicon-react";
 
+import { MAX_ITEM_QUANTITY } from "@/features/cart/domain/cart";
 import { useCart } from "@/features/cart/hooks/useCart";
 import { formatPrice, type Product } from "@/features/products/domain/product";
 
@@ -19,9 +20,13 @@ export default function ProductDetailModal({
     product,
     onClose,
 }: ProductDetailModalProps) {
-    const { addItem, getItemQuantity, openCart } = useCart();
-    const [quantity, setQuantity] = useState(1);
+    const { addItem, decrementItem, getItemQuantity, openCart } = useCart();
+    const [draftQuantity, setDraftQuantity] = useState(1);
     const [isAdded, setIsAdded] = useState(false);
+
+    const quantityInCart = product ? getItemQuantity(product.id) : 0;
+    const isAlreadyInCart = quantityInCart > 0;
+    const currentQuantity = isAlreadyInCart ? quantityInCart : draftQuantity;
 
     const handleKeyDown = useCallback(
         (event: KeyboardEvent) => {
@@ -45,10 +50,29 @@ export default function ProductDetailModal({
 
     if (!product) return null;
 
-    const quantityInCart = getItemQuantity(product.id);
+    const handleIncrement = () => {
+        if (!product) return;
+        if (isAlreadyInCart) {
+            if (quantityInCart < MAX_ITEM_QUANTITY) {
+                addItem(product, 1);
+            }
+        } else {
+            setDraftQuantity((q) => Math.min(MAX_ITEM_QUANTITY, q + 1));
+        }
+    };
+
+    const handleDecrement = () => {
+        if (!product) return;
+        if (isAlreadyInCart) {
+            decrementItem(product.id);
+        } else {
+            setDraftQuantity((q) => Math.max(1, q - 1));
+        }
+    };
 
     const handleAddToCart = () => {
-        addItem(product, quantity);
+        if (!product) return;
+        addItem(product, draftQuantity);
         setIsAdded(true);
         setTimeout(() => {
             onClose();
@@ -142,7 +166,11 @@ export default function ProductDetailModal({
                         <p className="mt-2 text-xs font-semibold text-accent">
                             Actualmente tienes {quantityInCart}{" "}
                             {quantityInCart === 1 ? "unidad" : "unidades"} en tu
-                            bolsa.
+                            bolsa
+                            {quantityInCart >= MAX_ITEM_QUANTITY
+                                ? " (máximo de 20 unidades alcanzado)"
+                                : ""}
+                            .
                         </p>
                     )}
                 </div>
@@ -154,30 +182,40 @@ export default function ProductDetailModal({
                         </span>
                         <div
                             role="group"
-                            aria-label={`Cantidad de ${product.name} a agregar`}
+                            aria-label={`Cantidad de ${product.name}`}
                             className="inline-flex items-center rounded-full border border-primary/25 bg-background p-1"
                         >
                             <button
                                 type="button"
-                                disabled={quantity <= 1}
-                                onClick={() =>
-                                    setQuantity((q) => Math.max(1, q - 1))
+                                disabled={
+                                    isAlreadyInCart
+                                        ? false
+                                        : draftQuantity <= 1
                                 }
-                                aria-label="Disminuir cantidad"
+                                onClick={handleDecrement}
+                                aria-label={
+                                    isAlreadyInCart
+                                        ? quantityInCart === 1
+                                            ? `Quitar ${product.name} de la bolsa`
+                                            : `Disminuir cantidad de ${product.name}`
+                                        : "Disminuir cantidad"
+                                }
                                 className={`inline-flex size-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-base font-bold text-primary transition hover:bg-primary/10 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`}
                             >
                                 -
                             </button>
                             <span className="min-w-10 text-center text-sm font-bold text-primary">
-                                {quantity}
+                                {currentQuantity}
                             </span>
                             <button
                                 type="button"
-                                disabled={quantity >= 99}
-                                onClick={() =>
-                                    setQuantity((q) => Math.min(99, q + 1))
+                                disabled={currentQuantity >= MAX_ITEM_QUANTITY}
+                                onClick={handleIncrement}
+                                aria-label={
+                                    currentQuantity >= MAX_ITEM_QUANTITY
+                                        ? "Límite máximo de 20 unidades alcanzado"
+                                        : "Aumentar cantidad"
                                 }
-                                aria-label="Aumentar cantidad"
                                 className={`inline-flex size-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-base font-bold text-primary transition hover:bg-primary/10 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`}
                             >
                                 +
@@ -187,7 +225,14 @@ export default function ProductDetailModal({
 
                     <button
                         type="button"
-                        onClick={handleAddToCart}
+                        onClick={
+                            isAlreadyInCart
+                                ? () => {
+                                      onClose();
+                                      openCart();
+                                  }
+                                : handleAddToCart
+                        }
                         className={`inline-flex min-h-12 flex-1 cursor-pointer items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-bold text-primary-foreground shadow-(--shadow-ambient-sm) transition hover:opacity-90 active:scale-98 ${focusRing}`}
                     >
                         <CartAdd
@@ -199,7 +244,9 @@ export default function ProductDetailModal({
                         <span>
                             {isAdded
                                 ? "¡Agregado a la bolsa!"
-                                : `Agregar al carrito • ${formatPrice(product.price * quantity)}`}
+                                : isAlreadyInCart
+                                  ? `Ver en el carrito • ${formatPrice(product.price * quantityInCart)}`
+                                  : `Agregar al carrito • ${formatPrice(product.price * draftQuantity)}`}
                         </span>
                     </button>
                 </div>

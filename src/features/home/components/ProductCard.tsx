@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CartLarge5 } from "reicon-react";
 
 import { useSession } from "@/features/auth/hooks/useSession";
+import { MAX_ITEM_QUANTITY } from "@/features/cart/domain/cart";
 import { useCart } from "@/features/cart/hooks/useCart";
 import Button from "@/features/common/components/Button";
 import type { Product } from "@/features/products/domain/product";
@@ -85,9 +86,14 @@ export default function ProductCard({ product }: { product: Product }) {
                             </button>
                             <button
                                 type="button"
+                                disabled={quantityInCart >= MAX_ITEM_QUANTITY}
                                 onClick={() => addItem(product, 1)}
-                                aria-label={`Agregar otra unidad de ${product.name}`}
-                                className={`inline-flex size-11 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-sm font-bold text-primary transition hover:bg-primary/10 active:scale-95 ${focusRing}`}
+                                aria-label={
+                                    quantityInCart >= MAX_ITEM_QUANTITY
+                                        ? "Límite máximo de 20 unidades alcanzado"
+                                        : `Agregar otra unidad de ${product.name}`
+                                }
+                                className={`inline-flex size-11 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-sm font-bold text-primary transition hover:bg-primary/10 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`}
                             >
                                 +
                             </button>
