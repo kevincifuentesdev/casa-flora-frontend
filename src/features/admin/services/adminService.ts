@@ -317,3 +317,55 @@ export async function deleteAdminProduct(
     }
 }
 
+
+const MAX_IMAGE_SIDE = 1400;
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+async function optimizeImage(file: File): Promise<Blob> {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, MAX_IMAGE_SIDE / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    const context = canvas.getContext("2d");
+    if (!context) {
+        bitmap.close();
+        return file;
+    }
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/webp", 0.85),
+    );
+    return blob && blob.type === "image/webp" ? blob : file;
+}
+
+export async function uploadProductImage(
+    file: File,
+): Promise<{ url?: string; error?: string }> {
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+        return { error: "Selecciona una imagen JPG, PNG o WebP." };
+    }
+    try {
+        const body = await optimizeImage(file);
+        if (body.size > 4 * 1024 * 1024) {
+            return { error: "La imagen supera los 4 MB permitidos." };
+        }
+        const res = await apiRequest<{ data: { url: string } }>(
+            "/api/uploads/products",
+            {
+                method: "POST",
+                headers: { "Content-Type": body.type || file.type },
+                body,
+            },
+        );
+        return { url: res.data.url };
+    } catch (error) {
+        return {
+            error: getErrorMessage(
+                error,
+                "No fue posible subir la fotografía del plato.",
+            ),
+        };
+    }
+}

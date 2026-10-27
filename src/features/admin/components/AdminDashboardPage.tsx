@@ -37,6 +37,7 @@ import {
     type OrderStatus,
     cancelAdminBooking,
     createAdminProduct,
+    uploadProductImage,
     deleteAdminProduct,
     fetchAdminBookingById,
     fetchAdminBookings,
@@ -301,6 +302,21 @@ export default function AdminDashboardPage() {
         null,
     );
     const [isSavingProduct, setIsSavingProduct] = useState(false);
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+    const handleImageFileChange = async (file: File | undefined) => {
+        if (!file) return;
+        setProductFormError(null);
+        setIsUploadingImage(true);
+        const result = await uploadProductImage(file);
+        setIsUploadingImage(false);
+        if (result.error || !result.url) {
+            setProductFormError(result.error ?? "No fue posible subir la imagen.");
+            return;
+        }
+        const uploadedUrl = result.url;
+        setProductForm((prev) => ({ ...prev, imageUrl: uploadedUrl }));
+    };
     const [productToDelete, setProductToDelete] = useState<Product | null>(
         null,
     );
@@ -3292,11 +3308,47 @@ export default function AdminDashboardPage() {
 
                             <div>
                                 <label
-                                    htmlFor="product-form-image"
+                                    htmlFor="product-form-image-file"
                                     className="block text-xs font-bold text-foreground"
                                 >
-                                    URL de la fotografía del plato *
+                                    Fotografía del plato *
                                 </label>
+                                <div className="mt-1 flex items-center gap-3">
+                                    <div className="relative size-20 shrink-0 overflow-hidden rounded-xl border border-foreground-muted/20 bg-background">
+                                        {productForm.imageUrl.trim() ? (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img
+                                                src={productForm.imageUrl}
+                                                alt="Vista previa del plato"
+                                                className="size-full object-cover"
+                                            />
+                                        ) : (
+                                            <span className="flex size-full items-center justify-center px-1 text-center text-[10px] text-foreground-muted">
+                                                Sin foto
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <input
+                                            id="product-form-image-file"
+                                            type="file"
+                                            accept="image/jpeg,image/png,image/webp"
+                                            disabled={isUploadingImage}
+                                            onChange={(e) => {
+                                                void handleImageFileChange(
+                                                    e.target.files?.[0],
+                                                );
+                                                e.target.value = "";
+                                            }}
+                                            className={`block w-full text-xs text-foreground file:mr-3 file:min-h-11 file:cursor-pointer file:rounded-full file:border-0 file:bg-primary file:px-4 file:py-2 file:text-xs file:font-bold file:text-primary-foreground disabled:opacity-60 ${focusRing}`}
+                                        />
+                                        <p className="m-0 mt-1 text-xs text-foreground-muted">
+                                            {isUploadingImage
+                                                ? "Subiendo fotografía..."
+                                                : "JPG, PNG o WebP. Se optimiza automáticamente."}
+                                        </p>
+                                    </div>
+                                </div>
                                 <input
                                     id="product-form-image"
                                     type="url"
@@ -3308,8 +3360,9 @@ export default function AdminDashboardPage() {
                                             imageUrl: e.target.value,
                                         }))
                                     }
-                                    placeholder="https://..."
-                                    className={`mt-1 min-h-11 w-full rounded-xl border border-foreground-muted/25 bg-background px-3.5 py-2 text-sm text-foreground ${focusRing}`}
+                                    aria-label="URL de la fotografía del plato"
+                                    placeholder="o pega una URL https://..."
+                                    className={`mt-2 min-h-11 w-full rounded-xl border border-foreground-muted/25 bg-background px-3.5 py-2 text-sm text-foreground ${focusRing}`}
                                 />
                             </div>
 
@@ -3352,7 +3405,7 @@ export default function AdminDashboardPage() {
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={isSavingProduct}
+                                    disabled={isSavingProduct || isUploadingImage}
                                     className={`inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full bg-primary px-6 py-2.5 text-xs font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-60 ${focusRing}`}
                                 >
                                     <Check className="size-4 shrink-0" aria-hidden="true" />
