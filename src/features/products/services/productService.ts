@@ -9,6 +9,11 @@ export interface ProductsApiResponse {
         total: number;
         categories: string[];
         maxPrice: number;
+        page?: number;
+        limit?: number;
+        totalPages?: number;
+        hasNextPage?: boolean;
+        hasPrevPage?: boolean;
     };
 }
 
@@ -17,6 +22,8 @@ export interface ProductFilterQuery {
     categories?: string[];
     maxPrice?: number;
     sort?: "relevancia" | "precio-asc" | "precio-desc" | "nombre-az";
+    page?: number;
+    limit?: number;
 }
 
 const fallbackProducts: Product[] = [
@@ -161,6 +168,12 @@ export async function fetchProducts(
     }
     if (query.sort) {
         params.set("sort", query.sort);
+    }
+    if (query.page !== undefined) {
+        params.set("page", String(query.page));
+    }
+    if (query.limit !== undefined) {
+        params.set("limit", String(query.limit));
     }
 
     const qs = params.toString();

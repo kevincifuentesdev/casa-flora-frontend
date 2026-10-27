@@ -109,10 +109,15 @@ export async function submitBooking(
     }
 }
 
-export async function fetchMyBookings(): Promise<BookingRecord[]> {
-    const response = await apiRequest<{ data: BookingRecord[] }>(
-        "/api/bookings/me",
-    );
+export async function fetchMyBookings(
+    query: { page?: number; limit?: number } = {},
+): Promise<BookingRecord[]> {
+    const params = new URLSearchParams();
+    if (query.page !== undefined) params.set("page", String(query.page));
+    if (query.limit !== undefined) params.set("limit", String(query.limit));
+    const qs = params.toString();
+    const path = qs ? `/api/bookings/me?${qs}` : "/api/bookings/me";
+    const response = await apiRequest<{ data: BookingRecord[] }>(path);
     return response.data;
 }
 

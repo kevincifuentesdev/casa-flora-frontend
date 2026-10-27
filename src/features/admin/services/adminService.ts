@@ -14,9 +14,20 @@ import type { Product } from "@/features/products/domain/product";
 export type OrderStatus = OrderRecord["status"];
 export type BookingAdminSort = "earliest" | "latest" | "diners-desc";
 
+export interface PaginationMeta {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+}
+
 export interface AdminOrderQuery {
     status?: OrderStatus;
     search?: string;
+    page?: number;
+    limit?: number;
 }
 
 export interface AdminBookingQuery {
@@ -27,6 +38,17 @@ export interface AdminBookingQuery {
     status?: BookingStatus;
     search?: string;
     sort?: BookingAdminSort;
+    page?: number;
+    limit?: number;
+}
+
+export interface AdminProductQuery {
+    search?: string;
+    categories?: string[];
+    maxPrice?: number;
+    sort?: string;
+    page?: number;
+    limit?: number;
 }
 
 export interface UpdateBookingAdminPayload {
@@ -67,15 +89,25 @@ function getErrorMessage(error: unknown, fallback: string): string {
 
 export async function fetchAdminOrders(
     query: AdminOrderQuery = {},
-): Promise<{ orders?: OrderRecord[]; error?: string; status?: number }> {
+): Promise<{
+    orders?: OrderRecord[];
+    meta?: PaginationMeta;
+    error?: string;
+    status?: number;
+}> {
     try {
         const params = new URLSearchParams();
         if (query.status) params.set("status", query.status);
         if (query.search?.trim()) params.set("search", query.search.trim());
+        if (query.page !== undefined) params.set("page", String(query.page));
+        if (query.limit !== undefined) params.set("limit", String(query.limit));
         const qs = params.toString();
         const path = qs ? `/api/orders/admin?${qs}` : "/api/orders/admin";
-        const res = await apiRequest<{ data: OrderRecord[] }>(path);
-        return { orders: res.data };
+        const res = await apiRequest<{
+            data: OrderRecord[];
+            meta?: PaginationMeta;
+        }>(path);
+        return { orders: res.data, meta: res.meta };
     } catch (error) {
         return {
             error: getErrorMessage(
@@ -112,7 +144,12 @@ export async function updateAdminOrderStatus(
 
 export async function fetchAdminBookings(
     query: AdminBookingQuery = {},
-): Promise<{ bookings?: BookingRecord[]; error?: string; status?: number }> {
+): Promise<{
+    bookings?: BookingRecord[];
+    meta?: PaginationMeta;
+    error?: string;
+    status?: number;
+}> {
     try {
         const params = new URLSearchParams();
         if (query.date) params.set("date", query.date);
@@ -122,11 +159,16 @@ export async function fetchAdminBookings(
         if (query.status) params.set("status", query.status);
         if (query.search?.trim()) params.set("search", query.search.trim());
         if (query.sort) params.set("sort", query.sort);
+        if (query.page !== undefined) params.set("page", String(query.page));
+        if (query.limit !== undefined) params.set("limit", String(query.limit));
 
         const qs = params.toString();
         const path = qs ? `/api/bookings/admin?${qs}` : "/api/bookings/admin";
-        const res = await apiRequest<{ data: BookingRecord[] }>(path);
-        return { bookings: res.data };
+        const res = await apiRequest<{
+            data: BookingRecord[];
+            meta?: PaginationMeta;
+        }>(path);
+        return { bookings: res.data, meta: res.meta };
     } catch (error) {
         return {
             error: getErrorMessage(
@@ -232,19 +274,38 @@ export async function fetchDaySlotOccupancy(date: string): Promise<{
     }
 }
 
-export async function fetchAdminProducts(): Promise<{
+export async function fetchAdminProducts(
+    query: AdminProductQuery = {},
+): Promise<{
     products?: Product[];
     categories?: string[];
+    meta?: PaginationMeta;
     error?: string;
 }> {
     try {
+        const params = new URLSearchParams();
+        if (query.search?.trim()) params.set("search", query.search.trim());
+        if (query.categories && query.categories.length > 0) {
+            for (const cat of query.categories) {
+                params.append("category", cat);
+            }
+        }
+        if (query.maxPrice !== undefined)
+            params.set("maxPrice", String(query.maxPrice));
+        if (query.sort) params.set("sort", query.sort);
+        if (query.page !== undefined) params.set("page", String(query.page));
+        if (query.limit !== undefined) params.set("limit", String(query.limit));
+
+        const qs = params.toString();
+        const path = qs ? `/api/products/admin?${qs}` : "/api/products/admin";
         const res = await apiRequest<{
             data: Product[];
-            meta?: { categories: string[] };
-        }>("/api/products/admin");
+            meta?: { categories: string[] } & Partial<PaginationMeta>;
+        }>(path);
         return {
             products: res.data,
             categories: res.meta?.categories,
+            meta: res.meta as PaginationMeta | undefined,
         };
     } catch (error) {
         return {

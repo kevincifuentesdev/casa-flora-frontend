@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     Add,
+    AngleLeft,
+    AngleRight,
     Calendar,
     Check,
     Copy,
@@ -208,6 +210,23 @@ function formatFavoriteMoment(value: string | null | undefined): string {
     return "Sin registrar";
 }
 
+const ORDERS_PER_PAGE = 10;
+const BOOKINGS_PER_PAGE = 10;
+const PRODUCTS_PER_PAGE = 8;
+
+function getVisiblePages(current: number, total: number): (number | "...")[] {
+    if (total <= 7) {
+        return Array.from({ length: total }, (_, i) => i + 1);
+    }
+    if (current <= 4) {
+        return [1, 2, 3, 4, 5, "...", total];
+    }
+    if (current >= total - 3) {
+        return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+    }
+    return [1, "...", current - 1, current, current + 1, "...", total];
+}
+
 export default function AdminDashboardPage() {
     const { session, isLoading: isSessionLoading } = useSession();
 
@@ -216,6 +235,10 @@ export default function AdminDashboardPage() {
         type: "success" | "error";
         message: string;
     } | null>(null);
+
+    const [ordersPage, setOrdersPage] = useState(1);
+    const [bookingsPage, setBookingsPage] = useState(1);
+    const [productsPage, setProductsPage] = useState(1);
 
     const [orders, setOrders] = useState<OrderRecord[]>([]);
     const [isLoadingOrders, setIsLoadingOrders] = useState(true);
@@ -577,6 +600,66 @@ export default function AdminDashboardPage() {
         productSearch,
         productSort,
     ]);
+
+    const totalOrdersPages = Math.max(
+        1,
+        Math.ceil(filteredOrders.length / ORDERS_PER_PAGE),
+    );
+    const safeOrdersPage = Math.min(Math.max(1, ordersPage), totalOrdersPages);
+    const paginatedOrders = useMemo(() => {
+        const start = (safeOrdersPage - 1) * ORDERS_PER_PAGE;
+        return filteredOrders.slice(start, start + ORDERS_PER_PAGE);
+    }, [filteredOrders, safeOrdersPage]);
+    const ordersStartDisplay =
+        filteredOrders.length === 0
+            ? 0
+            : (safeOrdersPage - 1) * ORDERS_PER_PAGE + 1;
+    const ordersEndDisplay = Math.min(
+        safeOrdersPage * ORDERS_PER_PAGE,
+        filteredOrders.length,
+    );
+
+    const totalBookingsPages = Math.max(
+        1,
+        Math.ceil(filteredBookings.length / BOOKINGS_PER_PAGE),
+    );
+    const safeBookingsPage = Math.min(
+        Math.max(1, bookingsPage),
+        totalBookingsPages,
+    );
+    const paginatedBookings = useMemo(() => {
+        const start = (safeBookingsPage - 1) * BOOKINGS_PER_PAGE;
+        return filteredBookings.slice(start, start + BOOKINGS_PER_PAGE);
+    }, [filteredBookings, safeBookingsPage]);
+    const bookingsStartDisplay =
+        filteredBookings.length === 0
+            ? 0
+            : (safeBookingsPage - 1) * BOOKINGS_PER_PAGE + 1;
+    const bookingsEndDisplay = Math.min(
+        safeBookingsPage * BOOKINGS_PER_PAGE,
+        filteredBookings.length,
+    );
+
+    const totalProductsPages = Math.max(
+        1,
+        Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE),
+    );
+    const safeProductsPage = Math.min(
+        Math.max(1, productsPage),
+        totalProductsPages,
+    );
+    const paginatedProducts = useMemo(() => {
+        const start = (safeProductsPage - 1) * PRODUCTS_PER_PAGE;
+        return filteredProducts.slice(start, start + PRODUCTS_PER_PAGE);
+    }, [filteredProducts, safeProductsPage]);
+    const productsStartDisplay =
+        filteredProducts.length === 0
+            ? 0
+            : (safeProductsPage - 1) * PRODUCTS_PER_PAGE + 1;
+    const productsEndDisplay = Math.min(
+        safeProductsPage * PRODUCTS_PER_PAGE,
+        filteredProducts.length,
+    );
 
     const orderStats = useMemo(() => {
         const preparing = orders.filter((o) => o.status === "preparing").length;
@@ -1373,9 +1456,10 @@ export default function AdminDashboardPage() {
                                     id="admin-order-search"
                                     type="search"
                                     value={orderSearch}
-                                    onChange={(e) =>
-                                        setOrderSearch(e.target.value)
-                                    }
+                                    onChange={(e) => {
+                                        setOrderSearch(e.target.value);
+                                        setOrdersPage(1);
+                                    }}
                                     placeholder="Ej. #6, Kevin, El Poblado, Abuela..."
                                     className={`mt-1.5 min-h-11 w-full rounded-xl border border-foreground-muted/25 bg-background px-3.5 py-2 text-sm text-foreground ${focusRing}`}
                                 />
@@ -1392,13 +1476,14 @@ export default function AdminDashboardPage() {
                                     <select
                                         id="admin-order-status"
                                         value={orderStatusFilter}
-                                        onChange={(e) =>
+                                        onChange={(e) => {
                                             setOrderStatusFilter(
                                                 e.target.value as
                                                     | OrderStatus
                                                     | "all",
-                                            )
-                                        }
+                                            );
+                                            setOrdersPage(1);
+                                        }}
                                         className={`mt-1.5 min-h-11 rounded-xl border border-foreground-muted/25 bg-background px-3.5 py-2 text-sm text-foreground ${focusRing}`}
                                     >
                                         <option value="all">
@@ -1429,14 +1514,15 @@ export default function AdminDashboardPage() {
                                     <select
                                         id="admin-order-delivery"
                                         value={orderDeliveryFilter}
-                                        onChange={(e) =>
+                                        onChange={(e) => {
                                             setOrderDeliveryFilter(
                                                 e.target.value as
                                                     | "all"
                                                     | "delivery"
                                                     | "pickup",
-                                            )
-                                        }
+                                            );
+                                            setOrdersPage(1);
+                                        }}
                                         className={`mt-1.5 min-h-11 rounded-xl border border-foreground-muted/25 bg-background px-3.5 py-2 text-sm text-foreground ${focusRing}`}
                                     >
                                         <option value="all">Todas</option>
@@ -1495,7 +1581,7 @@ export default function AdminDashboardPage() {
                             </div>
                         ) : (
                             <ul className="m-0 mt-5 list-none divide-y divide-foreground-muted/15 p-0">
-                                {filteredOrders.map((order) => {
+                                {paginatedOrders.map((order) => {
                                     const statusMeta = getOrderStatusMeta(
                                         order.status,
                                     );
@@ -1632,6 +1718,105 @@ export default function AdminDashboardPage() {
                                     );
                                 })}
                             </ul>
+                        )}
+
+                        {totalOrdersPages > 1 && (
+                            <nav
+                                aria-label="Paginación de pedidos"
+                                className="mt-6 flex flex-col items-center justify-between gap-4 border-t border-foreground-muted/15 pt-4 sm:flex-row"
+                            >
+                                <p className="m-0 text-xs text-foreground-muted">
+                                    Mostrando {ordersStartDisplay} -{" "}
+                                    {ordersEndDisplay} de{" "}
+                                    {filteredOrders.length} pedidos (página{" "}
+                                    {safeOrdersPage} de {totalOrdersPages})
+                                </p>
+
+                                <div className="flex items-center gap-1.5">
+                                    <button
+                                        type="button"
+                                        disabled={safeOrdersPage <= 1}
+                                        onClick={() =>
+                                            setOrdersPage((p) =>
+                                                Math.max(1, p - 1),
+                                            )
+                                        }
+                                        aria-label="Página anterior de pedidos"
+                                        className={`inline-flex min-h-9 items-center gap-1 rounded-full border border-foreground-muted/20 bg-surface px-3.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-background-alt disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`}
+                                    >
+                                        <AngleLeft
+                                            className="size-3.5"
+                                            aria-hidden="true"
+                                        />
+                                        <span>Anterior</span>
+                                    </button>
+
+                                    <div className="flex items-center gap-1">
+                                        {getVisiblePages(
+                                            safeOrdersPage,
+                                            totalOrdersPages,
+                                        ).map((item, idx) => {
+                                            if (item === "...") {
+                                                return (
+                                                    <span
+                                                        key={`orders-ellipsis-${idx}`}
+                                                        className="px-1 text-xs text-foreground-muted"
+                                                    >
+                                                        ...
+                                                    </span>
+                                                );
+                                            }
+                                            const isCurrent =
+                                                item === safeOrdersPage;
+                                            return (
+                                                <button
+                                                    key={`orders-page-${item}`}
+                                                    type="button"
+                                                    aria-current={
+                                                        isCurrent
+                                                            ? "page"
+                                                            : undefined
+                                                    }
+                                                    aria-label={`Ir a la página ${item} de pedidos`}
+                                                    onClick={() =>
+                                                        setOrdersPage(item)
+                                                    }
+                                                    className={`inline-flex size-8 cursor-pointer items-center justify-center rounded-full text-xs font-bold transition ${
+                                                        isCurrent
+                                                            ? "bg-primary text-primary-foreground shadow-xs"
+                                                            : "border border-foreground-muted/20 bg-surface text-foreground hover:bg-background-alt"
+                                                    } ${focusRing}`}
+                                                >
+                                                    {item}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            safeOrdersPage >= totalOrdersPages
+                                        }
+                                        onClick={() =>
+                                            setOrdersPage((p) =>
+                                                Math.min(
+                                                    totalOrdersPages,
+                                                    p + 1,
+                                                ),
+                                            )
+                                        }
+                                        aria-label="Página siguiente de pedidos"
+                                        className={`inline-flex min-h-9 items-center gap-1 rounded-full border border-foreground-muted/20 bg-surface px-3.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-background-alt disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`}
+                                    >
+                                        <span>Siguiente</span>
+                                        <AngleRight
+                                            className="size-3.5"
+                                            aria-hidden="true"
+                                        />
+                                    </button>
+                                </div>
+                            </nav>
                         )}
                     </div>
                 </section>
@@ -1801,9 +1986,10 @@ export default function AdminDashboardPage() {
                                         <button
                                             key={btn.id}
                                             type="button"
-                                            onClick={() =>
-                                                setBookingDayMode(btn.id)
-                                            }
+                                            onClick={() => {
+                                                setBookingDayMode(btn.id);
+                                                setBookingsPage(1);
+                                            }}
                                             className={`inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 py-1.5 text-xs font-bold transition ${focusRing} ${
                                                 bookingDayMode === btn.id
                                                     ? "bg-primary text-primary-foreground"
@@ -1823,6 +2009,7 @@ export default function AdminDashboardPage() {
                                                 setCustomBookingDate(
                                                     e.target.value,
                                                 );
+                                                setBookingsPage(1);
                                                 if (e.target.value) {
                                                     setOccupancyDate(
                                                         e.target.value,
@@ -1847,9 +2034,10 @@ export default function AdminDashboardPage() {
                                         id="admin-booking-search"
                                         type="search"
                                         value={bookingSearch}
-                                        onChange={(e) =>
-                                            setBookingSearch(e.target.value)
-                                        }
+                                        onChange={(e) => {
+                                            setBookingSearch(e.target.value);
+                                            setBookingsPage(1);
+                                        }}
                                         placeholder="Nombre, correo o ID..."
                                         className={`mt-1.5 min-h-11 w-full rounded-xl border border-foreground-muted/25 bg-background px-3.5 py-2 text-sm text-foreground ${focusRing}`}
                                     />
@@ -1865,12 +2053,13 @@ export default function AdminDashboardPage() {
                                     <select
                                         id="admin-booking-sort"
                                         value={bookingSort}
-                                        onChange={(e) =>
+                                        onChange={(e) => {
                                             setBookingSort(
                                                 e.target
                                                     .value as BookingAdminSort,
-                                            )
-                                        }
+                                            );
+                                            setBookingsPage(1);
+                                        }}
                                         className={`mt-1.5 min-h-11 w-full rounded-xl border border-foreground-muted/25 bg-background px-3.5 py-2 text-sm text-foreground ${focusRing}`}
                                     >
                                         <option value="earliest">
@@ -1895,13 +2084,14 @@ export default function AdminDashboardPage() {
                                     <select
                                         id="admin-booking-env"
                                         value={bookingEnvironmentFilter}
-                                        onChange={(e) =>
+                                        onChange={(e) => {
                                             setBookingEnvironmentFilter(
                                                 e.target.value as
                                                     | EnvironmentId
                                                     | "all",
-                                            )
-                                        }
+                                            );
+                                            setBookingsPage(1);
+                                        }}
                                         className={`mt-1.5 min-h-11 w-full rounded-xl border border-foreground-muted/25 bg-background px-3.5 py-2 text-sm text-foreground ${focusRing}`}
                                     >
                                         <option value="all">
@@ -1926,13 +2116,14 @@ export default function AdminDashboardPage() {
                                     <select
                                         id="admin-booking-status"
                                         value={bookingStatusFilter}
-                                        onChange={(e) =>
+                                        onChange={(e) => {
                                             setBookingStatusFilter(
                                                 e.target.value as
                                                     | BookingStatus
                                                     | "all",
-                                            )
-                                        }
+                                            );
+                                            setBookingsPage(1);
+                                        }}
                                         className={`mt-1.5 min-h-11 w-full rounded-xl border border-foreground-muted/25 bg-background px-3.5 py-2 text-sm text-foreground ${focusRing}`}
                                     >
                                         <option value="all">
@@ -1990,7 +2181,7 @@ export default function AdminDashboardPage() {
                             </div>
                         ) : (
                             <ul className="m-0 mt-5 list-none divide-y divide-foreground-muted/15 p-0">
-                                {filteredBookings.map((booking) => {
+                                {paginatedBookings.map((booking) => {
                                     const statusMeta = getBookingStatusMeta(
                                         booking.status,
                                     );
@@ -2122,6 +2313,106 @@ export default function AdminDashboardPage() {
                                 })}
                             </ul>
                         )}
+
+                        {totalBookingsPages > 1 && (
+                            <nav
+                                aria-label="Paginación de reservas"
+                                className="mt-6 flex flex-col items-center justify-between gap-4 border-t border-foreground-muted/15 pt-4 sm:flex-row"
+                            >
+                                <p className="m-0 text-xs text-foreground-muted">
+                                    Mostrando {bookingsStartDisplay} -{" "}
+                                    {bookingsEndDisplay} de{" "}
+                                    {filteredBookings.length} reservas (página{" "}
+                                    {safeBookingsPage} de {totalBookingsPages})
+                                </p>
+
+                                <div className="flex items-center gap-1.5">
+                                    <button
+                                        type="button"
+                                        disabled={safeBookingsPage <= 1}
+                                        onClick={() =>
+                                            setBookingsPage((p) =>
+                                                Math.max(1, p - 1),
+                                            )
+                                        }
+                                        aria-label="Página anterior de reservas"
+                                        className={`inline-flex min-h-9 items-center gap-1 rounded-full border border-foreground-muted/20 bg-surface px-3.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-background-alt disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`}
+                                    >
+                                        <AngleLeft
+                                            className="size-3.5"
+                                            aria-hidden="true"
+                                        />
+                                        <span>Anterior</span>
+                                    </button>
+
+                                    <div className="flex items-center gap-1">
+                                        {getVisiblePages(
+                                            safeBookingsPage,
+                                            totalBookingsPages,
+                                        ).map((item, idx) => {
+                                            if (item === "...") {
+                                                return (
+                                                    <span
+                                                        key={`bookings-ellipsis-${idx}`}
+                                                        className="px-1 text-xs text-foreground-muted"
+                                                    >
+                                                        ...
+                                                    </span>
+                                                );
+                                            }
+                                            const isCurrent =
+                                                item === safeBookingsPage;
+                                            return (
+                                                <button
+                                                    key={`bookings-page-${item}`}
+                                                    type="button"
+                                                    aria-current={
+                                                        isCurrent
+                                                            ? "page"
+                                                            : undefined
+                                                    }
+                                                    aria-label={`Ir a la página ${item} de reservas`}
+                                                    onClick={() =>
+                                                        setBookingsPage(item)
+                                                    }
+                                                    className={`inline-flex size-8 cursor-pointer items-center justify-center rounded-full text-xs font-bold transition ${
+                                                        isCurrent
+                                                            ? "bg-primary text-primary-foreground shadow-xs"
+                                                            : "border border-foreground-muted/20 bg-surface text-foreground hover:bg-background-alt"
+                                                    } ${focusRing}`}
+                                                >
+                                                    {item}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            safeBookingsPage >=
+                                            totalBookingsPages
+                                        }
+                                        onClick={() =>
+                                            setBookingsPage((p) =>
+                                                Math.min(
+                                                    totalBookingsPages,
+                                                    p + 1,
+                                                ),
+                                            )
+                                        }
+                                        aria-label="Página siguiente de reservas"
+                                        className={`inline-flex min-h-9 items-center gap-1 rounded-full border border-foreground-muted/20 bg-surface px-3.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-background-alt disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`}
+                                    >
+                                        <span>Siguiente</span>
+                                        <AngleRight
+                                            className="size-3.5"
+                                            aria-hidden="true"
+                                        />
+                                    </button>
+                                </div>
+                            </nav>
+                        )}
                     </div>
                 </section>
             )}
@@ -2166,9 +2457,10 @@ export default function AdminDashboardPage() {
                                     id="admin-product-search"
                                     type="search"
                                     value={productSearch}
-                                    onChange={(e) =>
-                                        setProductSearch(e.target.value)
-                                    }
+                                    onChange={(e) => {
+                                        setProductSearch(e.target.value);
+                                        setProductsPage(1);
+                                    }}
                                     placeholder="Nombre, slug o ingrediente..."
                                     className={`mt-1.5 min-h-11 w-full rounded-xl border border-foreground-muted/25 bg-background px-3.5 py-2 text-sm text-foreground ${focusRing}`}
                                 />
@@ -2184,9 +2476,10 @@ export default function AdminDashboardPage() {
                                 <select
                                     id="admin-product-category"
                                     value={productCategoryFilter}
-                                    onChange={(e) =>
-                                        setProductCategoryFilter(e.target.value)
-                                    }
+                                    onChange={(e) => {
+                                        setProductCategoryFilter(e.target.value);
+                                        setProductsPage(1);
+                                    }}
                                     className={`mt-1.5 min-h-11 w-full rounded-xl border border-foreground-muted/25 bg-background px-3.5 py-2 text-sm text-foreground ${focusRing}`}
                                 >
                                     <option value="all">
@@ -2210,14 +2503,15 @@ export default function AdminDashboardPage() {
                                 <select
                                     id="admin-product-availability"
                                     value={productAvailabilityFilter}
-                                    onChange={(e) =>
+                                    onChange={(e) => {
                                         setProductAvailabilityFilter(
                                             e.target.value as
                                                 | "all"
                                                 | "available"
                                                 | "unavailable",
-                                        )
-                                    }
+                                        );
+                                        setProductsPage(1);
+                                    }}
                                     className={`mt-1.5 min-h-11 w-full rounded-xl border border-foreground-muted/25 bg-background px-3.5 py-2 text-sm text-foreground ${focusRing}`}
                                 >
                                     <option value="all">
@@ -2242,15 +2536,16 @@ export default function AdminDashboardPage() {
                                 <select
                                     id="admin-product-sort"
                                     value={productSort}
-                                    onChange={(e) =>
+                                    onChange={(e) => {
                                         setProductSort(
                                             e.target.value as
                                                 | "orden"
                                                 | "precio-asc"
                                                 | "precio-desc"
                                                 | "nombre-az",
-                                        )
-                                    }
+                                        );
+                                        setProductsPage(1);
+                                    }}
                                     className={`mt-1.5 min-h-11 w-full rounded-xl border border-foreground-muted/25 bg-background px-3.5 py-2 text-sm text-foreground ${focusRing}`}
                                 >
                                     <option value="orden">
@@ -2302,7 +2597,7 @@ export default function AdminDashboardPage() {
                             </div>
                         ) : (
                             <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-                                {filteredProducts.map((product) => {
+                                {paginatedProducts.map((product) => {
                                     const isAvailable =
                                         product.available !== false;
                                     const isSpecial =
@@ -2465,6 +2760,106 @@ export default function AdminDashboardPage() {
                                     );
                                 })}
                             </div>
+                        )}
+
+                        {totalProductsPages > 1 && (
+                            <nav
+                                aria-label="Paginación del catálogo de platos"
+                                className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-foreground-muted/15 pt-4 sm:flex-row"
+                            >
+                                <p className="m-0 text-xs text-foreground-muted">
+                                    Mostrando {productsStartDisplay} -{" "}
+                                    {productsEndDisplay} de{" "}
+                                    {filteredProducts.length} platos (página{" "}
+                                    {safeProductsPage} de {totalProductsPages})
+                                </p>
+
+                                <div className="flex items-center gap-1.5">
+                                    <button
+                                        type="button"
+                                        disabled={safeProductsPage <= 1}
+                                        onClick={() =>
+                                            setProductsPage((p) =>
+                                                Math.max(1, p - 1),
+                                            )
+                                        }
+                                        aria-label="Página anterior de platos"
+                                        className={`inline-flex min-h-9 items-center gap-1 rounded-full border border-foreground-muted/20 bg-surface px-3.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-background-alt disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`}
+                                    >
+                                        <AngleLeft
+                                            className="size-3.5"
+                                            aria-hidden="true"
+                                        />
+                                        <span>Anterior</span>
+                                    </button>
+
+                                    <div className="flex items-center gap-1">
+                                        {getVisiblePages(
+                                            safeProductsPage,
+                                            totalProductsPages,
+                                        ).map((item, idx) => {
+                                            if (item === "...") {
+                                                return (
+                                                    <span
+                                                        key={`products-ellipsis-${idx}`}
+                                                        className="px-1 text-xs text-foreground-muted"
+                                                    >
+                                                        ...
+                                                    </span>
+                                                );
+                                            }
+                                            const isCurrent =
+                                                item === safeProductsPage;
+                                            return (
+                                                <button
+                                                    key={`products-page-${item}`}
+                                                    type="button"
+                                                    aria-current={
+                                                        isCurrent
+                                                            ? "page"
+                                                            : undefined
+                                                    }
+                                                    aria-label={`Ir a la página ${item} de platos`}
+                                                    onClick={() =>
+                                                        setProductsPage(item)
+                                                    }
+                                                    className={`inline-flex size-8 cursor-pointer items-center justify-center rounded-full text-xs font-bold transition ${
+                                                        isCurrent
+                                                            ? "bg-primary text-primary-foreground shadow-xs"
+                                                            : "border border-foreground-muted/20 bg-surface text-foreground hover:bg-background-alt"
+                                                    } ${focusRing}`}
+                                                >
+                                                    {item}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            safeProductsPage >=
+                                            totalProductsPages
+                                        }
+                                        onClick={() =>
+                                            setProductsPage((p) =>
+                                                Math.min(
+                                                    totalProductsPages,
+                                                    p + 1,
+                                                ),
+                                            )
+                                        }
+                                        aria-label="Página siguiente de platos"
+                                        className={`inline-flex min-h-9 items-center gap-1 rounded-full border border-foreground-muted/20 bg-surface px-3.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-background-alt disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`}
+                                    >
+                                        <span>Siguiente</span>
+                                        <AngleRight
+                                            className="size-3.5"
+                                            aria-hidden="true"
+                                        />
+                                    </button>
+                                </div>
+                            </nav>
                         )}
                     </div>
                 </section>
