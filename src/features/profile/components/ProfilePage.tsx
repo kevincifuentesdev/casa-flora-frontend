@@ -205,7 +205,8 @@ export function ProfilePage() {
     }, [activeModal, closeModal]);
 
     const loadBookings = useCallback(async () => {
-        if (!session?.user) {
+        const currentUser = session?.user;
+        if (!currentUser || currentUser.role === "admin") {
             setBookings([]);
             setIsLoadingBookings(false);
             return;
@@ -235,7 +236,7 @@ export function ProfilePage() {
 
         let cancelled = false;
 
-        if (!session?.user) {
+        if (!session?.user || session.user.role === "admin") {
             Promise.resolve().then(() => {
                 if (!cancelled) {
                     setBookings([]);
@@ -657,9 +658,100 @@ export function ProfilePage() {
                 ? "Carta equilibrada"
                 : "Personalizar gustos";
 
+    const isAdmin = user.role === "admin";
+
     return (
         <div className="mx-auto w-full max-w-(--container-max) px-(--spacing-margin-mobile) py-5 pb-28 md:px-(--spacing-margin-desktop) md:py-10 md:pb-16">
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 lg:gap-6">
+            {isAdmin ? (
+                <div className="mx-auto max-w-md">
+                    <div className="flex flex-col gap-4 rounded-2xl border border-foreground-muted/12 bg-surface p-5 shadow-(--shadow-ambient-md) sm:p-7">
+                        <div className="flex min-w-0 items-center gap-3.5">
+                            <div className="relative flex size-16 shrink-0 items-center justify-center rounded-full border-2 border-[#e5b8ad] bg-[#fbf7f2] p-1.5 shadow-xs">
+                                <Image
+                                    src="/img/temp_logo.png"
+                                    alt="Emblema de Casa Flora"
+                                    width={96}
+                                    height={96}
+                                    className="size-full rounded-full object-contain"
+                                />
+                            </div>
+
+                            <div className="min-w-0">
+                                <p className="m-0 text-[10px] font-bold tracking-[0.12em] text-[#ad5d4e] uppercase">
+                                    BIENVENIDO A CASA
+                                </p>
+                                <h1 className="m-0 truncate font-display text-2xl leading-tight font-bold text-primary">
+                                    ¡Hola, {displayName}!
+                                </h1>
+                                <p className="m-0 mt-0.5 truncate text-xs text-foreground-muted">
+                                    Sabor de hogar, siempre contigo.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-2.5">
+                            <Link
+                                href="/admin"
+                                className={`inline-flex min-h-11 w-full items-center justify-center rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground no-underline transition hover:opacity-90 ${focusRing}`}
+                            >
+                                Panel de Administración
+                            </Link>
+
+                            <div className="grid grid-cols-2 gap-2.5">
+                                <button
+                                    type="button"
+                                    onClick={() => openModal("edit-profile")}
+                                    aria-haspopup="dialog"
+                                    className={`inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-[#ad5d4e] bg-transparent px-4 py-2 text-xs font-semibold text-primary transition hover:bg-[#eed5ce]/35 dark:border-[#e5b8ad] dark:text-foreground ${focusRing}`}
+                                >
+                                    <svg
+                                        aria-hidden="true"
+                                        viewBox="0 0 20 20"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="1.8"
+                                        className="size-3.5 shrink-0"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M13.586 3.586a2 2 0 112.828 2.828l-8.793 8.793-3.536.707.707-3.536 8.794-8.792z"
+                                        />
+                                    </svg>
+                                    <span>Editar Perfil</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    disabled={isLoggingOut}
+                                    onClick={() => void handleSignOut()}
+                                    className={`inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-destructive/35 bg-destructive/6 px-4 py-2 text-xs font-semibold text-destructive transition hover:bg-destructive/14 disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`}
+                                >
+                                    <svg
+                                        aria-hidden="true"
+                                        viewBox="0 0 20 20"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="1.8"
+                                        className="size-3.5 shrink-0"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M13 4h3a1 1 0 011 1v10a1 1 0 01-1 1h-3M9 13l-3-3m0 0l3-3m-3 3h9"
+                                        />
+                                    </svg>
+                                    <span>
+                                        {isLoggingOut ? "Saliendo..." : "Cerrar sesión"}
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <>
+                    <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 lg:gap-6">
                 <div className="flex flex-col justify-between gap-4 rounded-2xl border border-foreground-muted/12 bg-surface p-5 shadow-(--shadow-ambient-md) sm:flex-row sm:items-center lg:col-span-4 lg:flex-col lg:justify-center lg:p-7 lg:text-center">
                     <div className="flex min-w-0 items-center gap-3.5 lg:flex-col lg:gap-0">
                         <div className="relative flex size-16 shrink-0 items-center justify-center rounded-full border-2 border-[#e5b8ad] bg-[#fbf7f2] p-1.5 shadow-xs lg:size-24 lg:p-2">
@@ -1159,6 +1251,8 @@ export function ProfilePage() {
                     COCINA VIRTUAL NACIDA EN MEDELLÍN
                 </p>
             </aside>
+                </>
+            )}
 
             {activeModal !== null && (
                 <div
@@ -1173,6 +1267,10 @@ export function ProfilePage() {
                     }}
                 >
                     <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl border border-foreground-muted/15 bg-surface p-5 pb-7 shadow-(--shadow-ambient-md) sm:max-h-[88dvh] sm:max-w-xl sm:rounded-2xl sm:p-7">
+                        <div
+                            className="mx-auto mb-3 h-1.5 w-12 shrink-0 rounded-full bg-foreground-muted/25 sm:hidden"
+                            aria-hidden="true"
+                        />
                         <div className="mb-4 flex items-start justify-between gap-3 border-b border-foreground-muted/15 pb-3.5">
                             <div className="min-w-0">
                                 <h2
