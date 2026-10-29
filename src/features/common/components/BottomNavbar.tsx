@@ -11,6 +11,10 @@ export default function BottomNavbar() {
     const pathname = usePathname();
     const { session, isLoading } = useSession();
 
+    if (pathname === "/onboarding") {
+        return null;
+    }
+
     return (
         <nav
             aria-label="Navegación inferior móvil"

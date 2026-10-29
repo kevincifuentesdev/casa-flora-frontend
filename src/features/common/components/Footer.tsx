@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Call, Clock, Location, Sms } from "reicon-react";
 
 interface FooterLink {
@@ -32,6 +35,12 @@ const navigationSections: FooterSection[] = [
 ];
 
 export default function Footer() {
+    const pathname = usePathname();
+
+    if (pathname === "/onboarding") {
+        return null;
+    }
+
     return (
         <footer className="relative mt-auto border-t border-border/20 bg-primary text-primary-foreground">
             <div className="mx-auto max-w-(--container-max) px-(--spacing-margin-mobile) pt-12 pb-28 md:px-(--spacing-margin-desktop) md:pt-16 md:pb-12">

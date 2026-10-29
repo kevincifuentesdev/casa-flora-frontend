@@ -25,8 +25,34 @@ export default function BookingForm() {
 
     if (confirmedBooking) {
         return (
-            <div className="relative rounded-xl bg-surface p-6 shadow-(--shadow-ambient-md) transition-colors duration-400 md:p-8 lg:p-10">
+            <div
+                id="booking-confirmation"
+                className="relative rounded-xl bg-surface p-6 shadow-(--shadow-ambient-md) transition-colors duration-400 md:p-8 lg:p-10"
+            >
                 <div className="flex flex-col gap-5 text-center">
+                    <div
+                        role="alert"
+                        aria-live="assertive"
+                        className="flex items-center justify-center gap-2.5 rounded-lg border border-emerald-600/30 bg-[#ecfdf5] px-4 py-3 text-sm font-bold text-[#065f46] dark:border-emerald-400/30 dark:bg-[#1f2e27] dark:text-[#a7f3d0]"
+                    >
+                        <svg
+                            aria-hidden="true"
+                            viewBox="0 0 20 20"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="size-5 shrink-0"
+                        >
+                            <circle cx="10" cy="10" r="7.5" />
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M6.8 10.2l2.1 2.1 4.3-4.3"
+                            />
+                        </svg>
+                        <span>Mesa reservada con éxito.</span>
+                    </div>
+
                     <h1 className="m-0 font-display text-3xl text-primary md:text-4xl">
                         Reserva Confirmada
                     </h1>
@@ -76,14 +102,17 @@ export default function BookingForm() {
                     <div className="mt-2 flex flex-col justify-center gap-3 sm:flex-row">
                         <Link
                             href="/profile"
-                            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-6 py-3 text-sm font-bold text-primary-foreground no-underline transition hover:opacity-90 active:scale-95"
+                            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-6 py-3 text-sm font-bold text-primary-foreground no-underline transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary active:scale-95"
                         >
                             Ver mis reservas
                         </Link>
                         <button
                             type="button"
-                            onClick={resetBookingForm}
-                            className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-border bg-transparent px-6 py-3 text-sm font-bold text-foreground transition hover:border-primary hover:text-primary active:scale-95"
+                            onClick={() => {
+                                resetBookingForm();
+                                window.scrollTo({ top: 0, behavior: "smooth" });
+                            }}
+                            className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-border bg-transparent px-6 py-3 text-sm font-bold text-foreground transition hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary active:scale-95"
                         >
                             Hacer otra reserva
                         </button>
@@ -115,17 +144,44 @@ export default function BookingForm() {
 
                 {submitError && (
                     <div
+                        id="booking-submit-alert"
                         role="alert"
-                        className="flex flex-col items-start justify-between gap-3 rounded-lg border border-destructive/40 bg-destructive/8 px-4 py-3 text-sm text-destructive sm:flex-row sm:items-center"
+                        aria-live="assertive"
+                        className="flex flex-col items-start justify-between gap-3 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3.5 text-sm font-semibold text-destructive sm:flex-row sm:items-center"
                     >
-                        <span>{submitError}</span>
-                        {requiresAuth && (
-                            <Link
-                                href="/login"
-                                className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-md bg-primary px-4 py-2 text-xs font-bold text-primary-foreground no-underline transition hover:opacity-90"
+                        <div className="flex items-center gap-2.5">
+                            <svg
+                                aria-hidden="true"
+                                viewBox="0 0 20 20"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                className="size-5 shrink-0"
                             >
-                                Iniciar sesión
-                            </Link>
+                                <circle cx="10" cy="10" r="7.5" />
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M10 6.5v4M10 13.5h.01"
+                                />
+                            </svg>
+                            <span>{submitError}</span>
+                        </div>
+                        {requiresAuth && (
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Link
+                                    href="/login"
+                                    className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-md bg-primary px-4 py-2 text-xs font-bold text-primary-foreground no-underline transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+                                >
+                                    Iniciar sesión
+                                </Link>
+                                <Link
+                                    href="/signup"
+                                    className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-md border border-primary/40 bg-surface px-4 py-2 text-xs font-bold text-primary no-underline transition hover:bg-background-alt focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary dark:border-foreground-muted/40 dark:text-foreground"
+                                >
+                                    Crear cuenta
+                                </Link>
+                            </div>
                         )}
                     </div>
                 )}

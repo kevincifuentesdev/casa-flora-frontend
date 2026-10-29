@@ -8,12 +8,6 @@ import { useSession } from "../hooks/useSession";
 const focusRing =
     "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary";
 
-/**
- * Navbar slot for the user session:
- * - authenticated: profile icon link
- * - anonymous: "Sé cliente" call to action
- * - loading: reserved space (avoids flashing the wrong state on hydration)
- */
 export default function SessionActions() {
     const { session, isLoading } = useSession();
 
@@ -27,7 +21,7 @@ export default function SessionActions() {
                 href="/profile"
                 aria-label={`Perfil de ${session.user.name}`}
                 title="Mi perfil"
-                className={`inline-flex size-9 shrink-0 items-center justify-center rounded-full text-primary transition duration-200 hover:opacity-80 active:scale-95 md:size-10 ${focusRing}`}
+                className={`hidden size-9 shrink-0 items-center justify-center rounded-full text-primary transition duration-200 hover:opacity-80 active:scale-95 md:inline-flex md:size-10 ${focusRing}`}
             >
                 <User className="size-5 md:size-6" aria-hidden="true" />
             </Link>

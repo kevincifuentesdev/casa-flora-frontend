@@ -1,7 +1,13 @@
+"use client";
+
 import Image from "next/image";
 import { CartAdd } from "reicon-react";
 
+import { useCart } from "@/features/cart/hooks/useCart";
 import { formatPrice, type Product } from "@/features/products/domain/product";
+
+const focusRing =
+    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary";
 
 export default function ProductCard({
     product,
@@ -10,9 +16,12 @@ export default function ProductCard({
     product: Product;
     index: number;
 }) {
+    const { addItem, decrementItem, getItemQuantity, openCart } = useCart();
+    const quantityInCart = getItemQuantity(product.id);
+
     return (
         <div
-            className="group flex animate-card-in cursor-pointer flex-col overflow-hidden rounded-lg bg-surface shadow-[0_8px_24px_rgb(38_24_20/6%)] transition duration-300 hover:-translate-y-1.5 hover:shadow-[0_16px_32px_rgb(38_24_20/12%)]"
+            className="group flex animate-card-in flex-col overflow-hidden rounded-lg bg-surface shadow-[0_8px_24px_rgb(38_24_20/6%)] transition duration-300 hover:-translate-y-1.5 hover:shadow-[0_16px_32px_rgb(38_24_20/12%)]"
             style={{ animationDelay: `${index * 0.05}s` }}
         >
             <div className="relative h-56 overflow-hidden">
@@ -42,22 +51,64 @@ export default function ProductCard({
                 <p className="mt-0 mb-6 line-clamp-2 text-base leading-6 text-foreground-muted">
                     {product.description}
                 </p>
-                <div className="mt-auto flex items-center justify-between">
+                <div className="mt-auto flex items-center justify-between gap-2">
                     <span className="text-sm font-bold text-secondary">
                         {formatPrice(product.price)}
                     </span>
-                    <button
-                        type="button"
-                        aria-label="Agregar al carrito"
-                        className="flex cursor-pointer items-center justify-center border-none bg-transparent p-0 text-primary transition hover:opacity-70"
-                    >
-                        <CartAdd
-                            width={24}
-                            height={24}
-                            aria-hidden="true"
-                            className="size-6 text-inherit"
-                        />
-                    </button>
+
+                    {quantityInCart > 0 ? (
+                        <div className="flex items-center gap-1.5">
+                            <div
+                                role="group"
+                                aria-label={`Cantidad de ${product.name} en tu bolsa`}
+                                className="inline-flex items-center rounded-full border border-primary/25 bg-background p-0.5"
+                            >
+                                <button
+                                    type="button"
+                                    onClick={() => decrementItem(product.id)}
+                                    aria-label={
+                                        quantityInCart === 1
+                                            ? `Quitar ${product.name} de la bolsa`
+                                            : `Disminuir cantidad de ${product.name}`
+                                    }
+                                    className={`inline-flex size-11 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-sm font-bold text-primary transition hover:bg-primary/10 active:scale-95 ${focusRing}`}
+                                >
+                                    -
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={openCart}
+                                    aria-label={`Ver ${quantityInCart} en tu bolsa`}
+                                    className={`inline-flex min-h-11 min-w-8 cursor-pointer items-center justify-center border-none bg-transparent px-1.5 text-xs font-bold text-primary ${focusRing}`}
+                                >
+                                    {quantityInCart}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => addItem(product, 1)}
+                                    aria-label={`Agregar otra unidad de ${product.name}`}
+                                    className={`inline-flex size-11 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-sm font-bold text-primary transition hover:bg-primary/10 active:scale-95 ${focusRing}`}
+                                >
+                                    +
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={() => addItem(product, 1)}
+                            aria-label={`Agregar ${product.name} al carrito`}
+                            title="Agregar al carrito"
+                            className={`inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-full border-none bg-transparent p-2 text-primary transition hover:bg-primary/8 active:scale-95 ${focusRing}`}
+                        >
+                            <CartAdd
+                                width={24}
+                                height={24}
+                                aria-hidden="true"
+                                className="size-6 text-inherit"
+                            />
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
